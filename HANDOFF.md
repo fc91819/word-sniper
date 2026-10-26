@@ -1,21 +1,25 @@
-# 单词狙击手 · 当前真相
+# 单词狙击手 · 当前交接
 
 ## 运行
-- 双击 `index.html` 即可运行；无构建步骤、无需服务器。
-- 可在 URL 后加 `?today=2026-11-05` 模拟训练日期。
+- Mac 上双击 index.html 可本地游玩；本地文件模式不注册 service worker。
+- PWA 安装与离线运行需要通过 HTTPS 访问；首次联网打开后添加到 iPad 主屏幕。
+- 可在地址后加 ?today=2026-11-05 模拟训练日期。
 
 ## 文件职责
-- tools/check-words.mjs：检查词库字段、干扰项、中文释义重叠和例句。
-- `index.html`：首页、训练页和结算页结构。
-- `style.css`：战术视觉、响应式布局、动画和减少动态效果适配。
-- `game.js`：训练流程、打靶、拼写、发音、连击、军衔和结算。
-- `srs.js`：间隔复习、日期模拟、打卡和 localStorage。
-- `words.js`：200 个分话题词条，导出全局 `WORDS`。
-- `README.md`：运行与玩法说明；`DECISIONS.md`：追加式决策台账。
+- index.html：首页、训练页、结算页和备份/恢复界面。
+- style.css：战术视觉、响应式布局、安全区和减少动态效果适配。
+- game.js：训练流程、发音、军衔、service worker 注册与备份交互。
+- backup.js：备份码编码、版本检查、校验位和恢复数据验证。
+- srs.js：复习调度、日期模拟、打卡和 localStorage 进度。
+- words.js：200 个分话题词条，挂载到全局变量 WORDS。
+- manifest.webmanifest、service-worker.js、icons/：PWA 安装信息、离线资源缓存和应用图标。
+- tools/draw-icons.py：用 Python 标准库绘制应用图标。
+- tools/check-words.mjs：自动校验词库字段、干扰词和例句。
+- README.md：运行、数据说明和待执行的 GitHub Pages 发布步骤。
+- DECISIONS.md：追加式决策台账。
 
 ## 进度
-- 第一阶段代码已实现：200 词、首页、打靶、拼写/默写、复习调度、军衔和结算。
-- 2026-10-26 总监已在浏览器实机验收（手机 375px、平板 768px、桌面）：流程跑通、控制台无报错。
-- D-003 已修复：retry 不写复习记录并保留原题 box/题型；拼写提示语和首页进度点布局已调整。
-- 200 个词条的干扰项已人工审阅并更新；node tools/check-words.mjs 通过，200 词、600 个干扰词、0 个问题。
-- Node SRS 模拟及 game.js、srs.js、words.js 语法检查通过；待总监复测本轮改动。
+- 第一阶段及 D-003 修复已通过总监验收；词库自动校验为 0 问题。
+- D-005 的 PWA、离线缓存和进度备份码已准备，GitHub Pages 尚未发布，等待家长账号并由总监继续安排。
+- 静态服务的根路径与 /word-sniper/ 子路径均能提供 10 个缓存资源；当前环境无无头浏览器，实际 service worker 注册、iPad 安装与离线启动仍待总监浏览器和 iPad 实机验收。
+- ill 的中文释义已改为“生病的”。

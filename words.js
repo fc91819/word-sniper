@@ -127,7 +127,7 @@
       ["health", "/helθ/", "n.", "健康", "Good health is important to everyone.", "良好的健康对每个人都很重要。", "doctor,hospital,student"],
       ["healthy", "/ˈhelθi/", "adj.", "健康的；有益健康的", "A healthy breakfast gives you energy.", "健康的早餐能给你能量。", "fever,stomachache,subway"],
       ["sick", "/sɪk/", "adj.", "生病的；恶心的", "He stayed home because he felt sick.", "他感觉不舒服，所以待在家里。", "medicine,sleep,busy"],
-      ["ill", "/ɪl/", "adj.; adv.", "生病的；坏地", "She was ill and missed school yesterday.", "她昨天生病了，没有去上学。", "rest,medicine,warm"],
+      ["ill", "/ɪl/", "adj.; adv.", "生病的", "She was ill and missed school yesterday.", "她昨天生病了，没有去上学。", "rest,medicine,warm"],
       ["doctor", "/ˈdɑːktər/", "n.", "医生；博士", "The doctor told me to get more rest.", "医生告诉我要多休息。", "diet,pain,make"],
       ["nurse", "/nɜːrs/", "n.; v.", "护士；护理", "The nurse helped the old man walk.", "护士帮助老人走路。", "medicine,toothache,lose"],
       ["hospital", "/ˈhɑːspɪtəl/", "n.", "医院", "My father works at the city hospital.", "我爸爸在市医院工作。", "rest,headache,guide"],

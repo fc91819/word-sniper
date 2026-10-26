@@ -2,6 +2,7 @@
   "use strict";
 
   const $ = function (id) { return document.getElementById(id); };
+  const BACKUP_META_KEY = "wordSniperBackupMeta.v1";
   const RANKS = [
     { name: "列兵", at: 0 }, { name: "上等兵", at: 10 }, { name: "下士", at: 25 },
     { name: "中士", at: 45 }, { name: "上士", at: 70 }, { name: "少尉", at: 100 },
@@ -57,6 +58,7 @@
     $("missionMeta").textContent = due ? "先复习 " + due + " 个到期词 · 再学 " + planned + " 个新词" : "新词 " + planned + " 个 · 约 5–8 分钟";
     app.storageAvailable = SRS.saveProgress(app.progress);
     $("storageNotice").hidden = app.storageAvailable;
+    updateBackupReminder();
     const queue = SRS.buildDailyQueue(WORDS, app.progress, app.date);
     $("startButton").disabled = queue.length === 0;
     if (!queue.length) $("missionMeta").textContent = "词库已完成 · 今天没有待复习单词";
@@ -425,6 +427,84 @@
     app.toastTimeout = window.setTimeout(function () { toast.classList.remove("show"); }, 2200);
   }
 
+  function updateBackupReminder() {
+    let lastBackup = null;
+    try {
+      lastBackup = window.localStorage.getItem(BACKUP_META_KEY);
+    } catch (_) {
+      // Storage may be disabled; keep the reminder visible in that case.
+    }
+    const lastTime = lastBackup ? Date.parse(lastBackup + "T00:00:00Z") : NaN;
+    const currentTime = Date.parse(app.date + "T00:00:00Z");
+    const daysSince = (currentTime - lastTime) / 86400000;
+    $("backupReminder").hidden = Number.isFinite(daysSince) && daysSince <= 7;
+  }
+
+  function openBackupPane(pane) {
+    $("backupTools").hidden = false;
+    $("backupExportPane").hidden = pane !== "export";
+    $("backupImportPane").hidden = pane !== "import";
+  }
+
+  function createBackupCode() {
+    if (!app.storageAvailable) {
+      showToast("当前浏览器无法读取本机进度，暂时不能生成备份码。");
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem(SRS.STORAGE_KEY);
+      const progress = saved ? JSON.parse(saved) : SRS.freshProgress();
+      $("backupCode").value = ProgressBackup.encode(progress);
+      openBackupPane("export");
+      try {
+        window.localStorage.setItem(BACKUP_META_KEY, app.date);
+      } catch (_) {
+        // The code remains available even if backup reminder metadata cannot be stored.
+      }
+      updateBackupReminder();
+    } catch (_) {
+      showToast("读取进度失败，无法生成备份码。");
+    }
+  }
+
+  function validateRestoreCode() {
+    const status = $("restoreStatus");
+    const preview = $("restorePreview");
+    const confirmButton = $("confirmRestoreButton");
+    restoreCandidate = null;
+    preview.hidden = true;
+    confirmButton.hidden = true;
+    status.classList.remove("good");
+    try {
+      restoreCandidate = ProgressBackup.decode($("restoreCode").value, WORDS);
+      const mastered = SRS.masteredCount(restoreCandidate);
+      const lastDate = restoreCandidate.lastCompletedDate || "未记录";
+      preview.textContent = "将恢复：已掌握 " + mastered + " 词，最后学习日期 " + lastDate;
+      preview.hidden = false;
+      confirmButton.hidden = false;
+      status.textContent = "备份码校验通过。确认后才会覆盖当前进度。";
+      status.classList.add("good");
+    } catch (error) {
+      status.textContent = error && error.message ? error.message : "备份码校验失败，请检查内容。";
+    }
+  }
+
+  function confirmRestore() {
+    if (!restoreCandidate) return;
+    try {
+      window.localStorage.setItem(SRS.STORAGE_KEY, JSON.stringify(restoreCandidate));
+      app.progress = restoreCandidate;
+      app.storageAvailable = true;
+      updateHome();
+      $("backupTools").hidden = true;
+      restoreCandidate = null;
+      showToast("进度已恢复。 ");
+    } catch (_) {
+      $("restoreStatus").classList.remove("good");
+      $("restoreStatus").textContent = "保存失败：当前浏览器无法写入本机进度。";
+    }
+  }
+
   function setupServiceWorker() {
     const host = window.location.hostname;
     const allowed = window.location.protocol === "https:" || host === "localhost" || host === "127.0.0.1" || host === "[::1]";
@@ -461,6 +541,8 @@
       // Local files and unsupported browser contexts remain playable without offline caching.
     });
   }
+
+  let restoreCandidate = null;
 
   function speak(text, fallbackWord) {
     let fallbackUsed = false;
@@ -503,6 +585,30 @@
 
   $("startButton").addEventListener("click", startSession);
   $("homeButton").addEventListener("click", returnHome);
+  $("backupButton").addEventListener("click", createBackupCode);
+  $("restoreButton").addEventListener("click", function () {
+    restoreCandidate = null;
+    $("restoreCode").value = "";
+    $("restoreStatus").textContent = "";
+    $("restoreStatus").classList.remove("good");
+    $("restorePreview").hidden = true;
+    $("confirmRestoreButton").hidden = true;
+    openBackupPane("import");
+  });
+  $("copyBackupButton").addEventListener("click", async function () {
+    const field = $("backupCode");
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(field.value);
+      showToast("备份码已复制，请妥善保存。 ");
+    } catch (_) {
+      field.focus();
+      field.select();
+      showToast("请长按文本框手动复制");
+    }
+  });
+  $("validateRestoreButton").addEventListener("click", validateRestoreCode);
+  $("confirmRestoreButton").addEventListener("click", confirmRestore);
   $("quitButton").addEventListener("click", function () { returnHome(); showToast("训练已结束，已完成的单词进度保留。 "); });
   $("detailReplay").addEventListener("click", function () {
     if (app.current) speak(app.current.word.word, app.current.word.word);

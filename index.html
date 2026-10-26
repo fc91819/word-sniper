@@ -54,6 +54,30 @@
         <article class="stat-card stat-card-wide panel"><span class="stat-icon" aria-hidden="true">◎</span><span class="stat-label">今日训练内容</span><strong id="queuePreview">12 个新词</strong><small>先复习到期词，再进入新词靶场</small></article>
       </div>
 
+      <section class="backup-panel panel" aria-labelledby="backupTitle">
+        <div class="backup-heading"><div><p class="detail-kicker">LOCAL SAVE / TRANSFER</p><h2 id="backupTitle">进度备份</h2></div><span class="backup-mark" aria-hidden="true">⬡</span></div>
+        <p id="backupReminder" class="backup-reminder" hidden>已超过 7 天未备份进度，建议生成备份码。</p>
+        <div class="backup-actions">
+          <button id="backupButton" class="backup-action" type="button">备份进度</button>
+          <button id="restoreButton" class="backup-action" type="button">恢复进度</button>
+        </div>
+        <div id="backupTools" class="backup-tools" hidden>
+          <div id="backupExportPane" hidden>
+            <label class="backup-label" for="backupCode">进度备份码</label>
+            <textarea id="backupCode" class="backup-code" rows="4" readonly spellcheck="false"></textarea>
+            <button id="copyBackupButton" class="backup-action" type="button">复制备份码</button>
+          </div>
+          <div id="backupImportPane" hidden>
+            <label class="backup-label" for="restoreCode">粘贴备份码</label>
+            <textarea id="restoreCode" class="backup-code" rows="4" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="粘贴以 WS1. 开头的备份码"></textarea>
+            <button id="validateRestoreButton" class="backup-action" type="button">校验并预览</button>
+            <p id="restoreStatus" class="restore-status" role="status" aria-live="polite"></p>
+            <p id="restorePreview" class="restore-preview" hidden></p>
+            <button id="confirmRestoreButton" class="backup-action confirm-restore" type="button" hidden>确认恢复</button>
+          </div>
+        </div>
+      </section>
+
       <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i></span></footer>
     </section>
 
@@ -128,6 +152,7 @@
     <footer class="site-footer"><span>NO SERVER · PROGRESS ON THIS DEVICE</span><span>✣ &nbsp; AIM · SPELL · REMEMBER</span></footer>
   </main>
   <script src="srs.js"></script>
+  <script src="backup.js"></script>
   <script src="words.js"></script>
   <script src="game.js"></script>
 </body>

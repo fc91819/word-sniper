@@ -1,17 +1,17 @@
 "use strict";
 
-const CACHE_NAME = "sniper-v1";
+const CACHE_NAME = "sniper-v2";
 const APP_FILES = [
   "index.html",
   "style.css",
   "game.js",
+  "backup.js",
   "srs.js",
   "words.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
-  "icons/apple-touch-icon.png",
-  "service-worker.js"
+  "icons/apple-touch-icon.png"
 ];
 
 self.addEventListener("install", function (event) {

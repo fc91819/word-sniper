@@ -90,6 +90,26 @@ h1, h2, p { margin-top: 0; }
 .stat-card strong em { margin-left: 3px; color: #9eaa9e; font-family: var(--body); font-size: 11px; font-style: normal; }
 .stat-card small { display: block; margin-left: 34px; color: #69776c; font-size: 9px; }
 .stat-card-wide strong { font-family: var(--body); font-size: 16px; line-height: 1.4; }
+.backup-panel { margin-top: 13px; padding: 17px 18px; }
+.backup-heading { display: flex; align-items: center; justify-content: space-between; }
+.backup-heading .detail-kicker { margin: 0; }
+.backup-heading h2 { margin: 5px 0 0; font-size: 14px; }
+.backup-mark { color: var(--green); font-size: 20px; }
+.backup-reminder { margin: 10px 0 0; color: var(--orange); font-size: 11px; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.backup-action { min-height: 37px; padding: 8px 12px; border: 1px solid #435743; border-radius: 2px; color: #d6e2d3; background: #202b22; cursor: pointer; font-size: 11px; }
+.backup-action:hover { border-color: var(--green-dark); color: var(--green); }
+.backup-tools { margin-top: 13px; padding-top: 12px; border-top: 1px solid #2b392e; }
+.backup-label { display: block; margin-bottom: 6px; color: #99a89a; font-size: 10px; }
+.backup-code { display: block; width: 100%; min-height: 82px; padding: 9px; border: 1px solid #435743; border-radius: 1px; color: var(--text); background: #101713; font-family: var(--mono); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; resize: vertical; }
+.backup-code::placeholder { color: #637067; font-family: var(--body); }
+.backup-tools .backup-action { margin-top: 8px; }
+.restore-status, .restore-preview { margin: 9px 0 0; font-size: 11px; line-height: 1.5; }
+.restore-status { color: #f09688; }
+.restore-status.good { color: var(--green); }
+.restore-preview { color: #c4d1c3; }
+.confirm-restore { border-color: #c2f68a; color: var(--green-ink); background: var(--green); font-weight: 700; }
+.confirm-restore:hover { color: var(--green-ink); background: #d0fa9f; }
 .home-footer, .site-footer { display: flex; align-items: center; justify-content: space-between; color: #667469; font-family: var(--mono); font-size: 8px; letter-spacing: .09em; }
 .home-footer { margin-top: 23px; }
 .home-footer span:last-child { display: flex; align-items: center; gap: 8px; }
