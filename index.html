@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101713">
   <meta name="description" content="用射击打靶的方式记住中考英语单词。">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="单词狙击手">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>单词狙击手 · 今日训练</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -40,6 +45,8 @@
           <div class="rank-marks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         </article>
       </div>
+
+      <button id="updateNotice" class="update-notice" type="button" hidden>有新版本，点此更新</button>
 
       <div class="stats-grid">
         <article class="stat-card panel"><span class="stat-icon" aria-hidden="true">◷</span><span class="stat-label">今日待复习</span><strong id="dueCount">0</strong><small>到期单词</small></article>

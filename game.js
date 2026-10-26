@@ -425,6 +425,43 @@
     app.toastTimeout = window.setTimeout(function () { toast.classList.remove("show"); }, 2200);
   }
 
+  function setupServiceWorker() {
+    const host = window.location.hostname;
+    const allowed = window.location.protocol === "https:" || host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+    if (!allowed || !("serviceWorker" in navigator)) return;
+
+    const notice = $("updateNotice");
+    let registration = null;
+    let reloadAfterUpdate = false;
+    const showUpdate = function () {
+      if (registration && registration.waiting && navigator.serviceWorker.controller) notice.hidden = false;
+    };
+
+    notice.addEventListener("click", function () {
+      if (!registration || !registration.waiting) return;
+      reloadAfterUpdate = true;
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloadAfterUpdate) window.location.reload();
+    });
+
+    const workerUrl = new URL("service-worker.js", document.baseURI).href;
+    const scope = new URL("./", document.baseURI).pathname;
+    navigator.serviceWorker.register(workerUrl, { scope: scope }).then(function (result) {
+      registration = result;
+      showUpdate();
+      result.addEventListener("updatefound", function () {
+        const installing = result.installing;
+        if (!installing) return;
+        installing.addEventListener("statechange", showUpdate);
+      });
+      result.update().catch(function () {});
+    }).catch(function () {
+      // Local files and unsupported browser contexts remain playable without offline caching.
+    });
+  }
+
   function speak(text, fallbackWord) {
     let fallbackUsed = false;
     const fallback = function () {
@@ -479,4 +516,5 @@
   });
 
   updateHome();
+  setupServiceWorker();
 })();
