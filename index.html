@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101713">
+  <meta name="description" content="用射击打靶的方式记住中考英语单词。">
+  <title>单词狙击手 · 今日训练</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="单词狙击手首页">
+        <span class="brand-mark" aria-hidden="true">✣</span>
+        <span><strong>单词狙击手</strong><small>WORD SNIPER · ENGLISH RANGE</small></span>
+      </a>
+      <div class="status-chip"><span class="status-dot"></span><span id="dateLabel">训练待命</span></div>
+    </header>
+
+    <section id="homeView" class="screen home-screen" aria-labelledby="homeTitle">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> DAILY TRAINING / 01</p>
+          <h1 id="homeTitle">今日行动</h1>
+          <p class="hero-lede">瞄准单词，记住它。<br>每一次命中，都离中考更近一步。</p>
+          <button id="startButton" class="primary-button" type="button">
+            <span class="button-icon" aria-hidden="true">↗</span>
+            <span><strong>开始今日任务</strong><small id="missionMeta">复习优先 · 新词 12 个</small></span>
+          </button>
+          <p id="storageNotice" class="quiet-note" hidden>当前浏览器无法保存进度，本次训练仍可继续。</p>
+        </div>
+
+        <article class="rank-card panel">
+          <div class="panel-topline"><span>当前军衔</span><span class="rank-insignia" aria-hidden="true">✦</span></div>
+          <div id="rankName" class="rank-name">列兵</div>
+          <div class="rank-progress-row"><span id="rankNext">距离上等兵</span><strong id="rankGap">还差 10 词</strong></div>
+          <div class="rank-track" aria-label="晋升进度"><span id="rankProgress"></span></div>
+          <div class="rank-foot"><span>已掌握</span><strong><b id="masteredCount">0</b> <small>/ 200</small></strong></div>
+          <div class="rank-marks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </article>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card panel"><span class="stat-icon" aria-hidden="true">◷</span><span class="stat-label">今日待复习</span><strong id="dueCount">0</strong><small>到期单词</small></article>
+        <article class="stat-card panel"><span class="stat-icon" aria-hidden="true">⌁</span><span class="stat-label">连续打卡</span><strong id="streakCount">0<em>天</em></strong><small>保持训练节奏</small></article>
+        <article class="stat-card stat-card-wide panel"><span class="stat-icon" aria-hidden="true">◎</span><span class="stat-label">今日训练内容</span><strong id="queuePreview">12 个新词</strong><small>先复习到期词，再进入新词靶场</small></article>
+      </div>
+
+      <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i></span></footer>
+    </section>
+
+    <section id="gameView" class="screen game-screen" hidden aria-live="polite">
+      <div class="game-heading">
+        <div><p class="eyebrow"><span class="eyebrow-line"></span><span id="modeEyebrow">TARGET RANGE</span></p><h1 id="modeTitle">打靶认词</h1></div>
+        <button id="quitButton" class="ghost-button" type="button">结束训练 <span aria-hidden="true">×</span></button>
+      </div>
+      <div class="game-hud panel">
+        <div class="hud-progress"><span id="taskCount">任务 1 / 12</span><div class="task-track"><i id="taskProgress"></i></div></div>
+        <div class="hud-stat"><span>生命</span><strong id="livesDisplay" class="lives" aria-label="剩余 5 格血">♥ ♥ ♥ ♥ ♥</strong></div>
+        <div class="hud-stat"><span>连击</span><strong><b id="comboCount">0</b><small id="comboMultiplier">1×</small></strong></div>
+        <div class="hud-stat hud-score"><span>得分</span><strong id="scoreCount">0</strong></div>
+      </div>
+
+      <article id="questionPanel" class="question-panel panel">
+        <div class="question-meta"><span class="crosshair-mark" aria-hidden="true">⊕</span><span id="questionLabel">锁定目标 / 选择正确单词</span><span class="question-box" id="boxLabel">BOX 0</span></div>
+        <div class="question-copy">
+          <p class="question-hint" id="questionHint">目标中文</p>
+          <h2 id="questionText">准备就绪</h2>
+        </div>
+        <div id="aimArea" class="aim-area" hidden>
+          <div id="targetGrid" class="target-grid"></div>
+          <p class="field-hint">点击正确靶子开火 <span aria-hidden="true">·</span> 点击就是射击</p>
+        </div>
+        <div id="spellArea" class="spell-area" hidden>
+          <button id="replayButton" class="sound-button" type="button"><span aria-hidden="true">◖))</span> 重播发音</button>
+          <div id="spellHint" class="spell-hint" hidden></div>
+          <div id="correctionPanel" class="correction-panel" hidden>
+            <span class="correction-label">正确拼写</span><strong id="correctWord"></strong>
+            <small>照着上方拼写再输入一次，完成装弹。</small>
+          </div>
+          <label class="sr-only" for="spellInput">输入英文单词</label>
+          <input id="spellInput" class="spell-input" type="text" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入英文单词" aria-describedby="spellHint">
+          <div id="keyboard" class="keyboard" aria-label="屏幕键盘"></div>
+          <button id="submitSpell" class="primary-button submit-button" type="button"><span class="button-icon" aria-hidden="true">↵</span><span><strong id="submitLabel">确认拼写</strong><small>ENTER / 提交</small></span></button>
+        </div>
+        <div id="feedback" class="feedback" role="status" aria-live="assertive"></div>
+      </article>
+
+      <article id="wordDetail" class="word-detail panel" hidden tabindex="0" role="button" aria-label="查看单词解释，点击继续">
+        <div class="detail-top"><span class="detail-kicker">命中记录 / WORD INTEL</span><span id="detailTimer" class="detail-timer">2.0s</span></div>
+        <div class="detail-word-line"><h2 id="detailWord">word</h2><span id="detailPhonetic">/wɜːrd/</span><button id="detailReplay" class="icon-button" type="button" aria-label="播放单词发音">◖))</button></div>
+        <p id="detailMeaning" class="detail-meaning">中文释义</p>
+        <button id="exampleButton" class="example-button" type="button"><span id="detailExample">Example sentence.</span><span class="example-play" aria-hidden="true">▶</span></button>
+        <p id="detailExampleCn" class="example-translation">例句翻译</p>
+        <div class="detail-bottom"><span id="detailPos">词性</span><button id="skipDetail" class="text-button" type="button">点击继续 <span aria-hidden="true">→</span></button></div>
+      </article>
+    </section>
+
+    <section id="resultView" class="screen result-screen" hidden aria-labelledby="resultTitle">
+      <div class="result-heading">
+        <p class="eyebrow"><span class="eyebrow-line"></span> DEBRIEF / MISSION COMPLETE</p>
+        <div class="result-emblem" aria-hidden="true">✦</div>
+        <h1 id="resultTitle">训练完成</h1>
+        <p id="resultSubhead" class="hero-lede">每次复习，都是一次命中。</p>
+      </div>
+      <div class="result-stats">
+        <article class="result-stat panel"><span>命中率</span><strong id="accuracyResult">0%</strong><small>按题目计算</small></article>
+        <article class="result-stat panel"><span>最高连击</span><strong id="comboResult">0</strong><small>连续答对</small></article>
+        <article class="result-stat panel"><span>新学单词</span><strong id="newWordsResult">0</strong><small>本局接触</small></article>
+      </div>
+      <article id="wrongCard" class="wrong-card panel" hidden>
+        <div class="wrong-heading"><div><span class="detail-kicker">复盘清单 / REVIEW</span><h2>需要再练的单词</h2></div><span id="wrongCountLabel" class="wrong-count">0 个</span></div>
+        <ul id="wrongList" class="wrong-list"></ul>
+      </article>
+      <article id="cleanCard" class="clean-card panel" hidden><span aria-hidden="true">◎</span><strong>本局零失误</strong><small>保持这个节奏。</small></article>
+      <button id="homeButton" class="primary-button return-button" type="button"><span class="button-icon" aria-hidden="true">⌂</span><span><strong>返回基地</strong><small>进度已保存到本机</small></span></button>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <footer class="site-footer"><span>NO SERVER · PROGRESS ON THIS DEVICE</span><span>✣ &nbsp; AIM · SPELL · REMEMBER</span></footer>
+  </main>
+  <script src="srs.js"></script>
+  <script src="words.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
