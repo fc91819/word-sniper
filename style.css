@@ -217,7 +217,8 @@ h1, h2, p { margin-top: 0; }
   .hero-grid { grid-template-columns: 1fr; gap: 24px; }
   .hero-copy h1 { font-size: 53px; }
   .hero-lede { margin: 12px 0 19px; font-size: 13px; }
-  .rank-card { min-height: 208px; padding: 19px 20px 16px; }
+  .rank-card { min-height: 220px; padding: 19px 20px 30px; }
+  .rank-marks { right: auto; left: 20px; bottom: 10px; }
   .rank-name { margin: 8px 0 16px; font-size: 38px; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 13px; }
   .stat-card { min-height: 112px; padding: 13px 12px; }
@@ -265,7 +266,8 @@ h1, h2, p { margin-top: 0; }
   .app-shell { width: calc(100% - 28px); }
   .brand { gap: 8px; }
   .status-chip { letter-spacing: 0; }
-  .rank-card { min-height: 197px; }
+  .rank-card { min-height: 209px; }
+  .rank-marks { left: 20px; }
   .question-panel { padding-right: 10px; padding-left: 10px; }
   .question-meta { font-size: 7px; }
   .target { min-height: 94px; }

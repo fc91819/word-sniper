@@ -143,6 +143,21 @@
     return progress.words[wordId];
   }
 
+  function recordAttempt(progress, item, isCorrect, date) {
+    if (item && item.retry) return progress.words[item.word.id] || null;
+    return recordAnswer(progress, item.word.id, isCorrect, date);
+  }
+
+  function makeRetryItem(item) {
+    return {
+      word: item.word,
+      box: item.box,
+      mode: item.mode,
+      retry: true,
+      kind: "retry"
+    };
+  }
+
   function completeSession(progress, date) {
     const day = dateOnly(date) ? date : today();
     if (progress.lastCompletedDate !== day) {
@@ -183,6 +198,8 @@
     dueCount: dueCount,
     buildDailyQueue: buildDailyQueue,
     recordAnswer: recordAnswer,
+    recordAttempt: recordAttempt,
+    makeRetryItem: makeRetryItem,
     completeSession: completeSession,
     masteredCount: masteredCount
   };

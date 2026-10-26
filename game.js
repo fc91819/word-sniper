@@ -132,7 +132,7 @@
     $("feedback").className = "feedback";
     $("questionText").textContent = item.word.cn;
     $("boxLabel").textContent = "BOX " + item.box;
-    $("questionHint").textContent = item.kind === "new" && !item.retry ? "新目标 / 记住中文，找到正确单词" : "中文释义 / 选择正确答案";
+    $("questionHint").textContent = !isAim ? "听发音，拼出单词" : item.kind === "new" && !item.retry ? "新目标 / 记住中文，找到正确单词" : "中文释义 / 选择正确答案";
     if (isAim) {
       $("modeEyebrow").textContent = "TARGET RANGE / CHOOSE";
       $("modeTitle").textContent = "打靶认词";
@@ -239,7 +239,7 @@
   function scheduleRetry(item) {
     if (item.retry || app.session.seen.has(item.word.id + ":retry")) return;
     app.session.seen.add(item.word.id + ":retry");
-    app.queue.push({ word: item.word, box: 1, mode: "aim", retry: true, kind: "retry" });
+    app.queue.push(SRS.makeRetryItem(item));
   }
 
   function updateCombo(correct) {
@@ -269,7 +269,7 @@
     if (correct) {
       app.session.correctAnswers += 1;
       updateCombo(true);
-      SRS.recordAnswer(app.progress, item.word.id, true, app.date);
+      SRS.recordAttempt(app.progress, item, true, app.date);
       clickedTarget.classList.add("hit");
       $("feedback").textContent = "命中！";
       $("feedback").className = "feedback good";
@@ -281,7 +281,7 @@
       updateCombo(false);
       markWrong(item);
       scheduleRetry(item);
-      SRS.recordAnswer(app.progress, item.word.id, false, app.date);
+      SRS.recordAttempt(app.progress, item, false, app.date);
       $("feedback").textContent = "未命中 · 正确答案已标出";
       $("feedback").className = "feedback bad";
       updateHud();
@@ -314,7 +314,7 @@
       updateCombo(false);
       markWrong(item);
       scheduleRetry(item);
-      SRS.recordAnswer(app.progress, item.word.id, false, app.date);
+      SRS.recordAttempt(app.progress, item, false, app.date);
       app.correctionRequired = true;
       $("correctWord").textContent = item.word.word;
       $("correctionPanel").hidden = false;
@@ -329,7 +329,7 @@
     }
     app.session.correctAnswers += 1;
     updateCombo(true);
-    SRS.recordAnswer(app.progress, item.word.id, true, app.date);
+    SRS.recordAttempt(app.progress, item, true, app.date);
     $("spellInput").disabled = true;
     $("feedback").textContent = "装弹完成 · 开火命中";
     $("feedback").className = "feedback good";
