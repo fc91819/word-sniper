@@ -24,7 +24,7 @@
 - `index.html`：页面结构和三种界面（首页、训练、结算）。
 - `style.css`：军事战术风格、手机竖屏布局、动画和减少动态效果适配。
 - `game.js`：答题流程、射击效果、拼写键盘、连击、军衔、结算和播放器调用。
-- `audio.js`：统一管理 speechSynthesis、有道发音、播放中断和下一题音频预加载。
+- `audio.js`：统一管理语音选择、speechSynthesis、有道发音、播放中断和下一题音频预加载。
 - `srs.js`：复习队列、box 调度、日期模拟、localStorage 读写和打卡天数。
 - `words.js`：200 个中考常用词，挂载到全局变量 `WORDS`。
 - `manifest.webmanifest`、`service-worker.js`、`icons/`：PWA 安装信息、离线缓存和应用图标。

@@ -562,8 +562,11 @@
   }
 
   $("startButton").addEventListener("click", function () {
-    Speaker.say("");
+    Speaker.say(" ");
     startSession();
+  });
+  $("previewAudioButton").addEventListener("click", function () {
+    Speaker.say("Hello, let's learn English.");
   });
   $("homeButton").addEventListener("click", returnHome);
   $("backupButton").addEventListener("click", createBackupCode);

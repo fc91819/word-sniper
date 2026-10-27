@@ -10,10 +10,57 @@
   let currentAudio = null;
   let preparedAudio = null;
   let preparedText = "";
+  const preferredVoiceNames = [
+    "Samantha", "Ava", "Allison", "Susan", "Zoe", "Nicky", "Tom", "Alex",
+    "Aaron", "Evan", "Nathan", "Joelle", "Noelle"
+  ];
+  const blockedVoiceNames = [
+    "Albert", "Bad News", "Bahh", "Bells", "Boing", "Bubbles", "Cellos", "Good News",
+    "Jester", "Organ", "Superstar", "Trinoids", "Whisper", "Wobble", "Zarvox", "Junior",
+    "Ralph", "Fred", "Kathy", "Grandma", "Grandpa", "Eddy", "Flo", "Reed", "Rocko",
+    "Sandy", "Shelley", "Deranged", "Hysterical", "Pipe Organ"
+  ];
+
+  function isEnglish(voice) {
+    return /^en([_-]|$)/i.test(voice.lang || "");
+  }
+
+  function isUsEnglish(voice) {
+    return /^en[-_]US$/i.test(voice.lang || "");
+  }
+
+  function isBlocked(voice) {
+    const name = String(voice.name || "").toLowerCase();
+    return blockedVoiceNames.some(function (blocked) { return name.includes(blocked.toLowerCase()); });
+  }
 
   function englishVoice(voices) {
-    const english = voices.filter(function (voice) { return /^en([_-]|$)/i.test(voice.lang || ""); });
-    return english.find(function (voice) { return /^en[-_]US$/i.test(voice.lang || ""); }) || english[0] || null;
+    const eligible = voices.filter(function (voice) { return isEnglish(voice) && !isBlocked(voice); });
+    const usVoices = eligible.filter(isUsEnglish);
+
+    for (const preferredName of preferredVoiceNames) {
+      const matching = usVoices.filter(function (voice) {
+        return String(voice.name || "").toLowerCase().includes(preferredName.toLowerCase());
+      });
+      if (matching.length) {
+        return matching.find(function (voice) { return /enhanced|premium/i.test(voice.name || ""); }) || matching[0];
+      }
+    }
+
+    return eligible.find(function (voice) { return voice.default === true; }) ||
+      usVoices[0] || eligible[0] || null;
+  }
+
+  function updateVoiceStatus() {
+    const status = root.document && root.document.getElementById("voiceStatus");
+    if (status) status.textContent = "当前发音：" + (selectedVoice ? selectedVoice.name : "有道词典");
+  }
+
+  function reportSelectedVoice() {
+    updateVoiceStatus();
+    if (selectedVoice && root.console && typeof root.console.info === "function") {
+      root.console.info("单词狙击手发音：" + selectedVoice.name + " " + selectedVoice.lang);
+    }
   }
 
   function readVoices() {
@@ -26,6 +73,7 @@
 
   const voicesReady = new Promise(function (resolve) {
     if (!synthesis || !Utterance) {
+      updateVoiceStatus();
       resolve();
       return;
     }
@@ -48,6 +96,7 @@
       if (!voice && !force) return;
       selectedVoice = voice;
       engine = voice ? "speech" : "youdao";
+      reportSelectedVoice();
       settled = true;
       if (timer !== null) root.clearTimeout(timer);
       removeListener();
@@ -82,11 +131,16 @@
   }
 
   function stopCurrent() {
+    let shouldDelaySpeech = false;
     if (synthesis) {
-      try { synthesis.cancel(); } catch (_) {}
+      try {
+        shouldDelaySpeech = Boolean(synthesis.speaking || synthesis.pending);
+        synthesis.cancel();
+      } catch (_) {}
     }
     clearAudio(currentAudio);
     currentAudio = null;
+    return shouldDelaySpeech;
   }
 
   function discardPrepared() {
@@ -129,9 +183,9 @@
     preloadWord(nextText, token);
   }
 
-  function playSpeech(text, token) {
+  function playSpeech(text, token, shouldDelaySpeech) {
     const utterance = new Utterance(text);
-    utterance.lang = "en-US";
+    utterance.lang = selectedVoice.lang || "en-US";
     utterance.voice = selectedVoice;
     utterance.rate = 0.9;
     utterance.onerror = function (event) {
@@ -143,18 +197,24 @@
     utterance.onend = function () {
       if (!latest(token)) return;
     };
-    try {
-      synthesis.speak(utterance);
-    } catch (_) {
-      // Keep the selected engine stable for the page instead of mixing voices.
-    }
+    const start = function () {
+      if (!latest(token)) return;
+      try {
+        synthesis.speak(utterance);
+      } catch (_) {
+        // Keep the selected engine stable for the page instead of mixing voices.
+      }
+    };
+    if (shouldDelaySpeech) root.setTimeout(start, 80);
+    else start();
   }
 
-  function unlockSpeech(token) {
+  function unlockSpeech(token, shouldDelaySpeech) {
     if (!synthesis || !Utterance) return;
     try {
-      const utterance = new Utterance("");
-      utterance.lang = "en-US";
+      const utterance = new Utterance(" ");
+      utterance.lang = selectedVoice ? selectedVoice.lang : "en-US";
+      utterance.voice = selectedVoice;
       utterance.volume = 0;
       utterance.rate = 0.9;
       utterance.onerror = function (event) {
@@ -165,7 +225,12 @@
       utterance.onend = function () {
         if (!latest(token)) return;
       };
-      synthesis.speak(utterance);
+      const start = function () {
+        if (!latest(token)) return;
+        try { synthesis.speak(utterance); } catch (_) { /* Unlocking is best-effort. */ }
+      };
+      if (shouldDelaySpeech) root.setTimeout(start, 80);
+      else start();
     } catch (_) {
       // Unlocking is best-effort; the selected playback engine remains unchanged.
     }
@@ -210,10 +275,10 @@
       preparedAudio = null;
       preparedText = "";
     }
-    stopCurrent();
-    if (!phrase) {
+    const shouldDelaySpeech = stopCurrent();
+    if (!phrase.trim()) {
       discardPrepared();
-      unlockSpeech(token);
+      unlockSpeech(token, shouldDelaySpeech);
       return;
     }
 
@@ -222,7 +287,7 @@
       if (engine === "speech" && selectedVoice) {
         if (reusableAudio) clearAudio(reusableAudio);
         discardPrepared();
-        playSpeech(phrase, token);
+        playSpeech(phrase, token, shouldDelaySpeech);
         return;
       }
       playYoudao(phrase, token, reusableAudio);

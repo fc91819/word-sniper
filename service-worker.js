@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "sniper-v3";
+const CACHE_NAME = "sniper-v4";
 const APP_FILES = [
   "index.html",
   "style.css",
