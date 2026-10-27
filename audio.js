@@ -6,6 +6,7 @@
   const Utterance = root.SpeechSynthesisUtterance || null;
   let sequence = 0;
   let routeLevel = 2;
+  let onlineMode = "youdao";
   let selectedVoice = null;
   let currentAudio = null;
   let preparedAudio = null;
@@ -72,7 +73,7 @@
   function currentRouteLabel() {
     if (routeLevel === 0 && selectedVoice) return selectedVoice.name + "（本机）";
     if (routeLevel === 1) return "系统默认声音（本机）";
-    return "有道词典（需联网）";
+    return onlineMode === "baidu" ? "百度翻译朗读（需联网）" : "有道词典（需联网）";
   }
 
   function updateVoiceStatus() {
@@ -250,6 +251,12 @@
     return "https://dict.youdao.com/dictvoice?audio=" + encodeURIComponent(text) + "&type=2";
   }
 
+  function onlineAudioUrl(text) {
+    if (!/\s/.test(text)) return audioUrl(text);
+    const encodedText = encodeURIComponent(text).replace(/'/g, "%27");
+    return "https://fanyi.baidu.com/gettts?lan=en&text=" + encodedText + "&spd=3&source=web";
+  }
+
   function preloadWord(nextText, token) {
     if (!nextText) return;
     if (preparedAudio && preparedText === nextText) return;
@@ -399,13 +406,15 @@
     setRouteLevel(nextLevel);
     const shouldDelay = cancelSynthesis();
     if (nextLevel === 2) {
-      playYoudao(attempt.text, attempt.token, null, false);
+      playOnlineAudio(attempt.text, attempt.token, null, false);
     } else {
       startSpeechAttempt(attempt.text, attempt.token, nextLevel, shouldDelay, false);
     }
   }
 
-  function playYoudao(text, token, reusableAudio, diagnostic) {
+  function playOnlineAudio(text, token, reusableAudio, diagnostic) {
+    onlineMode = /\s/.test(text) ? "baidu" : "youdao";
+    updateVoiceStatus();
     let audio = reusableAudio || null;
     const requestedAt = Date.now();
     let reported = false;
@@ -446,7 +455,7 @@
       if (!audio) {
         audio = new Audio();
         audio.preload = "auto";
-        audio.src = audioUrl(text);
+        audio.src = onlineAudioUrl(text);
       }
       currentAudio = audio;
       audio.onplaying = function () {
@@ -491,7 +500,7 @@
     if (!latest(token)) return;
     if (level >= 2) {
       if (!diagnostic) setRouteLevel(2);
-      playYoudao(text, token, null, diagnostic);
+      playOnlineAudio(text, token, null, diagnostic);
       return;
     }
     if (!synthesis || !Utterance) {
@@ -500,7 +509,7 @@
         return;
       }
       setRouteLevel(2);
-      playYoudao(text, token, null, false);
+      playOnlineAudio(text, token, null, false);
       return;
     }
     startSpeechAttempt(text, token, level, shouldDelaySpeech, diagnostic);
@@ -562,7 +571,7 @@
             return;
           }
           if (engineForCurrentRoute() === "youdao" && reusableAudio) {
-            playYoudao(phrase, token, reusableAudio, false);
+            playOnlineAudio(phrase, token, reusableAudio, false);
             return;
           }
           if (reusableAudio) clearAudio(reusableAudio);

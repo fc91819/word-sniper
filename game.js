@@ -636,7 +636,22 @@
   });
   attachAudioTest("testSelectedVoice", "diagnosticVoiceResult", 0);
   attachAudioTest("testDefaultVoice", "diagnosticDefaultResult", 1);
-  attachAudioTest("testYoudaoVoice", "diagnosticYoudaoResult", 2);
+  $("testYoudaoVoice").addEventListener("click", function () {
+    const result = $("diagnosticYoudaoResult");
+    result.textContent = "检测中…";
+    Speaker.say("hello", {
+      testLevel: 2,
+      onTestResult: function (outcome) { result.textContent = formatAudioTestResult(outcome); }
+    });
+  });
+  $("testBaiduVoice").addEventListener("click", function () {
+    const result = $("diagnosticBaiduResult");
+    result.textContent = "检测中…";
+    Speaker.say("Hello, let's learn English.", {
+      testLevel: 3,
+      onTestResult: function (outcome) { result.textContent = formatAudioTestResult(outcome); }
+    });
+  });
   $("homeButton").addEventListener("click", returnHome);
   $("backupButton").addEventListener("click", createBackupCode);
   $("restoreButton").addEventListener("click", function () {

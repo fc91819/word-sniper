@@ -158,7 +158,7 @@ function createPlayer() {
   assert.equal(player.voiceStatus.textContent, "当前发音：系统默认声音（本机）");
 }
 
-// c) Failure at both speech levels routes the original phrase through Youdao.
+// c) Failure at both speech levels routes the original sentence through Baidu.
 {
   const player = createPlayer();
   player.setSpeakBehavior(function () { player.synthesis.speaking = true; });
@@ -169,8 +169,20 @@ function createPlayer() {
   await player.fireTimer(1500);
   await player.flush();
   assert.equal(player.audioInstances.length, 1);
-  assert.match(player.audioInstances[0].src, /hello%20original%20sentence/);
-  assert.equal(player.voiceStatus.textContent, "当前发音：有道词典（需联网）");
+  assert.equal(player.audioInstances[0].src, "https://fanyi.baidu.com/gettts?lan=en&text=hello%20original%20sentence&spd=3&source=web");
+  assert.equal(player.voiceStatus.textContent, "当前发音：百度翻译朗读（需联网）");
+}
+
+// c2) Level 3 uses Youdao for a single word and Baidu for a sentence, encoding punctuation.
+{
+  const player = createPlayer();
+  player.window.Speaker.say("hello", { testLevel: 2, onTestResult() {} });
+  await player.flush();
+  assert.equal(player.audioInstances[0].src, "https://dict.youdao.com/dictvoice?audio=hello&type=2");
+
+  player.window.Speaker.say("Hello, let's learn English.", { testLevel: 3, onTestResult() {} });
+  await player.flush();
+  assert.equal(player.audioInstances[1].src, "https://fanyi.baidu.com/gettts?lan=en&text=Hello%2C%20let%27s%20learn%20English.&spd=3&source=web");
 }
 
 // d) A working selected voice remains in use and never starts Youdao.
@@ -243,4 +255,4 @@ function createPlayer() {
   assert.equal(player.audioTapHint.hidden, false);
 }
 
-console.log("发音回退模拟通过：无 onstart、0.1 秒结束、两级失败回有道、正常声音不换路、快速新请求淘汰旧回退；检测结果与有道拒绝提示通过。");
+console.log("发音回退模拟通过：无 onstart、0.1 秒结束、两级失败回在线服务；单词用有道、句子用百度且标点编码正确；正常声音不换路、快速新请求淘汰旧回退；检测结果与拒绝提示通过。");
