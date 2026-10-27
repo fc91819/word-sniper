@@ -23,6 +23,7 @@
     answeredCurrent: false,
     storageAvailable: true
   };
+  let workerLifecycle = null;
 
   function getRank(count) {
     let index = 0;
@@ -69,6 +70,35 @@
     $("homeView").hidden = name !== "home";
     $("gameView").hidden = name !== "game";
     $("resultView").hidden = name !== "result";
+  }
+
+  function createWorkerLifecycle(serviceWorkerContainer, doc, win, isHome) {
+    let registration = null;
+    let updatePending = false;
+    let reloadRequested = false;
+
+    function reloadAtHome() {
+      if (!updatePending || reloadRequested || !isHome()) return;
+      reloadRequested = true;
+      win.location.reload();
+    }
+
+    serviceWorkerContainer.addEventListener("controllerchange", function () {
+      updatePending = true;
+      reloadAtHome();
+    });
+    doc.addEventListener("visibilitychange", function () {
+      if (doc.visibilityState !== "visible" || !registration || typeof registration.update !== "function") return;
+      try {
+        const update = registration.update();
+        if (update && typeof update.catch === "function") update.catch(function () {});
+      } catch (_) {}
+    });
+
+    return {
+      setRegistration: function (value) { registration = value; },
+      onHome: reloadAtHome
+    };
   }
 
   function startSession() {
@@ -516,32 +546,14 @@
     const allowed = window.location.protocol === "https:" || host === "localhost" || host === "127.0.0.1" || host === "[::1]";
     if (!allowed || !("serviceWorker" in navigator)) return;
 
-    const notice = $("updateNotice");
-    let registration = null;
-    let reloadAfterUpdate = false;
-    const showUpdate = function () {
-      if (registration && registration.waiting && navigator.serviceWorker.controller) notice.hidden = false;
-    };
-
-    notice.addEventListener("click", function () {
-      if (!registration || !registration.waiting) return;
-      reloadAfterUpdate = true;
-      registration.waiting.postMessage({ type: "SKIP_WAITING" });
-    });
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (reloadAfterUpdate) window.location.reload();
+    workerLifecycle = createWorkerLifecycle(navigator.serviceWorker, document, window, function () {
+      return !$("homeView").hidden;
     });
 
     const workerUrl = new URL("service-worker.js", document.baseURI).href;
     const scope = new URL("./", document.baseURI).pathname;
     navigator.serviceWorker.register(workerUrl, { scope: scope }).then(function (result) {
-      registration = result;
-      showUpdate();
-      result.addEventListener("updatefound", function () {
-        const installing = result.installing;
-        if (!installing) return;
-        installing.addEventListener("statechange", showUpdate);
-      });
+      workerLifecycle.setRegistration(result);
       result.update().catch(function () {});
     }).catch(function () {
       // Local files and unsupported browser contexts remain playable without offline caching.
@@ -559,6 +571,7 @@
     app.detailReadyAt = 0;
     updateHome();
     setScreen("home");
+    if (workerLifecycle) workerLifecycle.onHome();
   }
 
   $("startButton").addEventListener("click", function () {

@@ -64,8 +64,6 @@ h1, h2, p { margin-top: 0; }
 .primary-button strong { font-size: 14px; font-weight: 800; letter-spacing: .05em; }
 .primary-button small { margin-top: 4px; color: #36492d; font-family: var(--mono); font-size: 9px; letter-spacing: .035em; }
 .quiet-note { margin: 12px 0 0; color: var(--orange); font-size: 11px; }
-.update-notice { display: block; margin: 16px 0 0; padding: 0; border: 0; color: var(--green); background: transparent; cursor: pointer; font-size: 11px; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
-.update-notice:hover { color: #d3ffa1; }
 .panel { position: relative; border: 1px solid var(--line); background: linear-gradient(136deg, #1b251e, #151d18 82%); box-shadow: 0 17px 36px #03070530; }
 .rank-card { min-height: 230px; padding: 24px 25px 20px; overflow: hidden; }
 .rank-card::after { position: absolute; right: -45px; bottom: -128px; width: 250px; height: 250px; border: 1px solid #71866b1b; border-radius: 50%; content: ''; box-shadow: 0 0 0 18px #71866b08, 0 0 0 38px #71866b07; pointer-events: none; }

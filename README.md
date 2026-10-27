@@ -43,4 +43,4 @@
 
 项目已发布在 [https://fc91819.github.io/word-sniper/](https://fc91819.github.io/word-sniper/)，对应公开仓库为 `fc91819/word-sniper`。Pages 使用 `main` 分支根目录；后续提交到 `main` 并运行 `git push origin main`，GitHub Pages 会自动更新。
 
-页面资源、manifest 图标和 service worker 都使用相对项目路径；service worker 按注册作用域缓存资源，因此可部署在 `/word-sniper/` 子路径。首次联网打开后，页面会缓存离线所需文件；Safari 中可用“添加到主屏幕”安装。
+页面资源、manifest 图标和 service worker 都使用相对项目路径；service worker 按注册作用域缓存资源，因此可部署在 `/word-sniper/` 子路径。首次联网打开后，页面会缓存离线所需文件；新版安装后自动接管，训练中延迟到返回首页再刷新；Safari 中可用“添加到主屏幕”安装。

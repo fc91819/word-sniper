@@ -24,11 +24,8 @@ self.addEventListener("install", function (event) {
     const cache = await caches.open(CACHE_NAME);
     const scopeUrl = self.registration.scope;
     await cache.addAll(APP_FILES.map(function (path) { return new URL(path, scopeUrl).href; }));
+    await self.skipWaiting();
   })());
-});
-
-self.addEventListener("message", function (event) {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", function (event) {
@@ -46,22 +43,20 @@ self.addEventListener("fetch", function (event) {
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith((async function () {
-    const cached = await caches.match(request);
-    if (cached) return cached;
-    try {
-      const response = await fetch(request);
-      if (response.ok && new URL(request.url).origin === self.location.origin) {
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(request, response.clone());
-      }
-      return response;
-    } catch (error) {
-      if (request.mode === "navigate") {
-        const indexUrl = new URL("index.html", self.registration.scope).href;
-        const offlinePage = await caches.match(indexUrl);
-        if (offlinePage) return offlinePage;
-      }
-      throw error;
+    const cache = await caches.open(CACHE_NAME);
+    const indexUrl = new URL("index.html", self.registration.scope).href;
+    if (request.mode === "navigate") {
+      const index = await cache.match(indexUrl, { ignoreSearch: true });
+      return index || Response.error();
     }
+
+    const requestUrl = new URL(request.url);
+    const isAppFile = APP_FILES.some(function (path) {
+      return new URL(path, self.registration.scope).pathname === requestUrl.pathname;
+    });
+    if (!isAppFile) return fetch(request);
+
+    const cached = await cache.match(request, { ignoreSearch: true });
+    return cached || Response.error();
   })());
 });
