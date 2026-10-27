@@ -23,7 +23,8 @@
 
 - `index.html`：页面结构和三种界面（首页、训练、结算）。
 - `style.css`：军事战术风格、手机竖屏布局、动画和减少动态效果适配。
-- `game.js`：答题流程、射击效果、拼写键盘、连击、军衔和结算。
+- `game.js`：答题流程、射击效果、拼写键盘、连击、军衔、结算和播放器调用。
+- `audio.js`：统一管理 speechSynthesis、有道发音、播放中断和下一题音频预加载。
 - `srs.js`：复习队列、box 调度、日期模拟、localStorage 读写和打卡天数。
 - `words.js`：200 个中考常用词，挂载到全局变量 `WORDS`。
 - `manifest.webmanifest`、`service-worker.js`、`icons/`：PWA 安装信息、离线缓存和应用图标。
@@ -39,11 +40,6 @@
 
 ## 发布到 GitHub Pages
 
-GitHub 账号准备好后，在项目根目录使用 GitHub CLI 登录并创建公开仓库、推送当前分支：
+项目已发布在 [https://fc91819.github.io/word-sniper/](https://fc91819.github.io/word-sniper/)，对应公开仓库为 `fc91819/word-sniper`。Pages 使用 `main` 分支根目录；后续提交到 `main` 并运行 `git push origin main`，GitHub Pages 会自动更新。
 
-1. 运行 `gh auth login` 完成登录。
-2. 运行 `gh repo create word-sniper --public --source=. --remote=origin --push` 创建公开仓库并推送。
-3. 打开仓库的 **Settings → Pages**，将 **Build and deployment** 设为 **Deploy from a branch**，选择 `main` 分支和 `/(root)` 目录并保存。
-4. 发布完成后网址为 `https://用户名.github.io/word-sniper/`，其中“用户名”替换成 GitHub 用户名。
-
-页面资源、manifest 图标和 service worker 都使用相对项目路径；service worker 按注册作用域缓存资源，因此可部署在 `/word-sniper/` 子路径。首次联网打开后，页面会缓存离线所需文件；Safari 中可用“添加到主屏幕”安装。此说明是待执行步骤，本仓库当前尚未发布。
+页面资源、manifest 图标和 service worker 都使用相对项目路径；service worker 按注册作用域缓存资源，因此可部署在 `/word-sniper/` 子路径。首次联网打开后，页面会缓存离线所需文件；Safari 中可用“添加到主屏幕”安装。

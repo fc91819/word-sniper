@@ -118,13 +118,14 @@
         <div id="feedback" class="feedback" role="status" aria-live="assertive"></div>
       </article>
 
-      <article id="wordDetail" class="word-detail panel" hidden tabindex="0" role="button" aria-label="查看单词解释，点击继续">
-        <div class="detail-top"><span class="detail-kicker">命中记录 / WORD INTEL</span><span id="detailTimer" class="detail-timer">2.0s</span></div>
-        <div class="detail-word-line"><h2 id="detailWord">word</h2><span id="detailPhonetic">/wɜːrd/</span><button id="detailReplay" class="icon-button" type="button" aria-label="播放单词发音">◖))</button></div>
+      <article id="wordDetail" class="word-detail panel" hidden tabindex="-1" aria-labelledby="detailWord">
+        <div class="detail-top"><span class="detail-kicker">命中记录 / WORD INTEL</span></div>
+        <div class="detail-word-line"><h2 id="detailWord">word</h2><span id="detailPhonetic">/wɜːrd/</span><button id="detailReplay" class="icon-button" type="button" aria-label="重播单词发音">◖))</button></div>
         <p id="detailMeaning" class="detail-meaning">中文释义</p>
-        <button id="exampleButton" class="example-button" type="button"><span id="detailExample">Example sentence.</span><span class="example-play" aria-hidden="true">▶</span></button>
+        <div class="example-row"><p id="detailExample" class="detail-example">Example sentence.</p><button id="exampleButton" class="example-button" type="button">🔊 读例句</button></div>
         <p id="detailExampleCn" class="example-translation">例句翻译</p>
-        <div class="detail-bottom"><span id="detailPos">词性</span><button id="skipDetail" class="text-button" type="button">点击继续 <span aria-hidden="true">→</span></button></div>
+        <div class="detail-bottom"><span id="detailPos">词性</span></div>
+        <button id="skipDetail" class="next-detail-button" type="button">下一题 <span aria-hidden="true">→</span></button>
       </article>
     </section>
 
@@ -149,11 +150,13 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="nextAudioWord" type="hidden" value="">
     <footer class="site-footer"><span>NO SERVER · PROGRESS ON THIS DEVICE</span><span>✣ &nbsp; AIM · SPELL · REMEMBER</span></footer>
   </main>
   <script src="srs.js"></script>
   <script src="backup.js"></script>
   <script src="words.js"></script>
+  <script src="audio.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

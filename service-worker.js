@@ -1,10 +1,11 @@
 "use strict";
 
-const CACHE_NAME = "sniper-v2";
+const CACHE_NAME = "sniper-v3";
 const APP_FILES = [
   "index.html",
   "style.css",
   "game.js",
+  "audio.js",
   "backup.js",
   "srs.js",
   "words.js",

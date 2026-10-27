@@ -8,7 +8,8 @@
 ## 文件职责
 - index.html：首页、训练页、结算页和备份/恢复界面。
 - style.css：战术视觉、响应式布局、安全区和减少动态效果适配。
-- game.js：训练流程、发音、军衔、service worker 注册与备份交互。
+- game.js：训练流程、发音调用、手动讲解卡、军衔、service worker 注册与备份交互。
+- audio.js：统一发音播放器、语音引擎选择、播放取消和下一题单词预加载。
 - backup.js：备份码编码、版本检查、校验位和恢复数据验证。
 - srs.js：复习调度、日期模拟、打卡和 localStorage 进度。
 - words.js：200 个分话题词条，挂载到全局变量 WORDS。
@@ -23,3 +24,4 @@
 - 已发布（2026-10-26）：https://fc91819.github.io/word-sniper/ ，仓库 https://github.com/fc91819/word-sniper（公开，main 分支根目录即 Pages）。本机 gh 位于 ~/.local/bin/gh，已登录 fc91819。发布流程：改完代码 → 改 service-worker.js 的缓存版本号 → commit → git push，1~3 分钟后线上更新。线上已验证：service worker 激活、缓存 10 个文件、200 词加载、控制台无报错。
 - 2026-10-26 总监浏览器实测通过：service worker 激活并缓存 11 个文件，断开服务后页面仍能打开；备份→清空→恢复，数据完全一致。待发布后在 iPad 上实机验收：添加到主屏幕、离线启动、系统键盘遮挡、状态栏留白。
 - ill 的中文释义已改为“生病的”。
+- 2026-10-26 按 D-006 修复发音串音与延迟，讲解卡改为手动继续；Service Worker 缓存版本升至 sniper-v3。代码、自动化检查和线上更新待本次发布验证；iPad 实机验收由家长和总监完成。

@@ -179,23 +179,24 @@ h1, h2, p { margin-top: 0; }
 .feedback { min-height: 20px; margin-top: 10px; color: var(--orange); font-size: 11px; text-align: center; }
 .feedback.good { color: var(--green); }
 .feedback.bad { color: #f09688; }
-.word-detail { max-width: 690px; margin: 23px auto 0; padding: 20px 23px 15px; cursor: pointer; border-color: #486044; animation: detail-enter .28s ease-out; }
+.word-detail { max-width: 690px; margin: 23px auto 0; padding: 20px 23px 18px; border-color: #486044; animation: detail-enter .28s ease-out; }
 .detail-top, .detail-bottom { display: flex; align-items: center; justify-content: space-between; }
 .detail-kicker { color: #8ba07f; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; }
-.detail-timer { color: var(--green); font-family: var(--mono); font-size: 10px; }
-.detail-word-line { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; }
+.detail-word-line { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .detail-word-line h2 { margin: 0; font-family: var(--display); font-size: 38px; letter-spacing: .025em; }
 .detail-word-line > span { color: #99a89a; font-family: var(--mono); font-size: 12px; }
 .icon-button { display: grid; width: 31px; height: 29px; place-items: center; margin-left: auto; border: 1px solid #43583f; color: var(--green); background: #202d22; cursor: pointer; font-size: 11px; }
-.detail-meaning { margin: 3px 0 13px; color: #b4c0b5; font-size: 12px; }
-.example-button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid #354438; color: #e1e9df; background: #121a15; cursor: pointer; text-align: left; font-size: 14px; line-height: 1.55; }
+.detail-meaning { margin: 5px 0 14px; color: #b4c0b5; font-size: 15px; line-height: 1.5; }
+.example-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 13px 15px; border: 1px solid #354438; background: #121a15; }
+.detail-example { margin: 0; color: #e1e9df; font-size: 20px; line-height: 1.5; overflow-wrap: anywhere; }
+.example-button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; padding: 10px 13px; border: 1px solid #58734b; color: var(--green); background: #202d22; cursor: pointer; white-space: nowrap; font-size: 14px; font-weight: 700; }
 .example-button:hover { border-color: #69865b; }
-.example-play { flex: 0 0 auto; color: var(--green); font-size: 11px; }
-.example-translation { margin: 7px 0 0; color: #87978a; font-size: 11px; }
-.detail-bottom { margin-top: 14px; padding-top: 11px; border-top: 1px solid #2b392e; }
+.example-translation { margin: 10px 0 0; color: #a3b0a4; font-size: 16px; line-height: 1.6; }
+.detail-bottom { margin-top: 15px; padding-top: 11px; border-top: 1px solid #2b392e; }
 .detail-bottom > span { color: #718074; font-family: var(--mono); font-size: 9px; }
-.text-button { padding: 5px; border: 0; color: var(--green); background: none; cursor: pointer; font-size: 10px; }
-.text-button:hover { color: #d3ffa1; }
+.next-detail-button { display: flex; width: 100%; min-height: 60px; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; border: 1px solid #c2f68a; border-radius: 2px; color: var(--green-ink); background: var(--green); cursor: pointer; font-size: 17px; font-weight: 800; letter-spacing: .04em; }
+.next-detail-button:hover { background: #d0fa9f; }
+.next-detail-button:disabled { cursor: wait; opacity: .58; }
 
 /* Results */
 .result-screen { max-width: 740px; margin: auto; padding-top: 40px; text-align: center; }
@@ -276,7 +277,10 @@ h1, h2, p { margin-top: 0; }
   .detail-word-line { gap: 8px; }
   .detail-word-line h2 { font-size: 32px; }
   .detail-word-line > span { font-size: 10px; }
-  .example-button { font-size: 12px; }
+  .example-row { grid-template-columns: 1fr; gap: 9px; padding: 11px; }
+  .detail-example { font-size: 16px; }
+  .example-button { min-height: 48px; font-size: 13px; }
+  .example-translation { font-size: 14px; }
   .result-screen { padding-top: 30px; }
   .result-heading h1 { font-size: 42px; }
   .result-stats { gap: 7px; }

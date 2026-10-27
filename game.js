@@ -15,8 +15,9 @@
     index: 0,
     current: null,
     session: null,
-    detailTimeout: null,
-    detailInterval: null,
+    detailRevealTimeout: null,
+    detailGateTimeout: null,
+    detailReadyAt: 0,
     toastTimeout: null,
     correctionRequired: false,
     answeredCurrent: false,
@@ -210,13 +211,12 @@
     $("spellHint").textContent = recall ? "" : "首字母：" + item.word.word.charAt(0).toUpperCase() + "　·　字母数：" + item.word.word.length;
     $("replayButton").hidden = false;
     app.correctionRequired = false;
-    $("replayButton").onclick = function () { speak(item.word.word, item.word.word); };
     $("submitSpell").onclick = submitSpelling;
     $("spellInput").onkeydown = function (event) {
       if (event.key === "Enter") { event.preventDefault(); submitSpelling(); }
     };
     renderKeyboard();
-    speak(item.word.word, item.word.word);
+    Speaker.say(item.word.word);
   }
 
   function insertLetter(letter) {
@@ -275,9 +275,8 @@
       clickedTarget.classList.add("hit");
       $("feedback").textContent = "命中！";
       $("feedback").className = "feedback good";
-      speak(item.word.word, item.word.word);
       updateHud();
-      window.setTimeout(function () { showWordDetail(item); }, 420);
+      scheduleWordDetail(item, 420);
     } else {
       app.session.lives = Math.max(0, app.session.lives - 1);
       updateCombo(false);
@@ -287,7 +286,7 @@
       $("feedback").textContent = "未命中 · 正确答案已标出";
       $("feedback").className = "feedback bad";
       updateHud();
-      window.setTimeout(function () { showWordDetail(item); }, 1500);
+      scheduleWordDetail(item, 1500);
     }
   }
 
@@ -336,19 +335,20 @@
     $("feedback").textContent = "装弹完成 · 开火命中";
     $("feedback").className = "feedback good";
     updateHud();
-    speak(item.word.word, item.word.word);
     showWordDetail(item);
   }
 
-  function stopDetailTimer() {
-    window.clearTimeout(app.detailTimeout);
-    window.clearInterval(app.detailInterval);
-    app.detailTimeout = null;
-    app.detailInterval = null;
+  function scheduleWordDetail(item, delay) {
+    window.clearTimeout(app.detailRevealTimeout);
+    app.detailRevealTimeout = window.setTimeout(function () {
+      app.detailRevealTimeout = null;
+      if (!$("gameView").hidden) showWordDetail(item);
+    }, delay);
   }
 
   function showWordDetail(item) {
-    stopDetailTimer();
+    Speaker.stop();
+    window.clearTimeout(app.detailGateTimeout);
     $("questionPanel").hidden = true;
     $("wordDetail").hidden = false;
     $("detailWord").textContent = item.word.word;
@@ -357,23 +357,23 @@
     $("detailExample").textContent = item.word.example;
     $("detailExampleCn").textContent = item.word.exampleCn;
     $("detailPos").textContent = item.word.topic + " · " + item.word.pos;
-    $("detailTimer").textContent = "2.0s";
-    $("detailReplay").onclick = function (event) { event.stopPropagation(); speak(item.word.word, item.word.word); };
-    $("exampleButton").onclick = function (event) { event.stopPropagation(); speak(item.word.example, item.word.word); };
-    $("skipDetail").onclick = function (event) { event.stopPropagation(); nextQuestion(); };
-    $("wordDetail").onclick = function (event) {
-      if (!event.target.closest("button")) nextQuestion();
-    };
-    let remaining = 2;
-    app.detailInterval = window.setInterval(function () {
-      remaining = Math.max(0, remaining - 0.1);
-      $("detailTimer").textContent = remaining.toFixed(1) + "s";
-    }, 100);
-    app.detailTimeout = window.setTimeout(nextQuestion, 2000);
+    app.detailReadyAt = Date.now() + 800;
+    $("skipDetail").disabled = true;
+    app.detailGateTimeout = window.setTimeout(function () {
+      app.detailGateTimeout = null;
+      if (!$("wordDetail").hidden) $("skipDetail").disabled = false;
+    }, 800);
+    $("wordDetail").focus();
+    Speaker.say(item.word.word);
   }
 
   function nextQuestion() {
-    stopDetailTimer();
+    if (!$("wordDetail").hidden && Date.now() < app.detailReadyAt) return;
+    window.clearTimeout(app.detailGateTimeout);
+    app.detailGateTimeout = null;
+    Speaker.stop();
+    $("skipDetail").disabled = false;
+    app.detailReadyAt = 0;
     app.index += 1;
     app.answeredCurrent = false;
     app.correctionRequired = false;
@@ -387,10 +387,16 @@
     }
     app.current = app.queue[app.index];
     app.answeredCurrent = false;
+    const nextItem = app.queue[app.index + 1];
+    $("nextAudioWord").value = nextItem ? nextItem.word.word : "";
+    document.dispatchEvent(new Event("sniper:question"));
     configureMode(app.current);
   }
 
   function finishSession() {
+    Speaker.stop();
+    window.clearTimeout(app.detailRevealTimeout);
+    window.clearTimeout(app.detailGateTimeout);
     SRS.completeSession(app.progress, app.date);
     SRS.saveProgress(app.progress);
     const accuracy = app.session.totalAnswers ? Math.round((app.session.correctAnswers / app.session.totalAnswers) * 100) : 0;
@@ -544,46 +550,21 @@
 
   let restoreCandidate = null;
 
-  function speak(text, fallbackWord) {
-    let fallbackUsed = false;
-    const fallback = function () {
-      if (fallbackUsed) return;
-      fallbackUsed = true;
-      try {
-        const audio = new Audio("https://dict.youdao.com/dictvoice?audio=" + encodeURIComponent(fallbackWord) + "&type=2");
-        const playing = audio.play();
-        if (playing && typeof playing.catch === "function") playing.catch(function () {});
-      } catch (_) {
-        // Speech and online audio are optional; the word stays visible for study.
-      }
-    };
-    try {
-      const engine = window.speechSynthesis;
-      const Utterance = window.SpeechSynthesisUtterance;
-      const voices = engine && typeof engine.getVoices === "function" ? engine.getVoices() : [];
-      const englishVoices = voices.filter(function (voice) { return /^en([_-]|$)/i.test(voice.lang || ""); });
-      if (!engine || !Utterance || !englishVoices.length) {
-        fallback();
-        return;
-      }
-      const utterance = new Utterance(text);
-      utterance.lang = "en-US";
-      utterance.voice = englishVoices.find(function (voice) { return /^en[-_]US$/i.test(voice.lang || ""); }) || englishVoices[0];
-      utterance.onerror = fallback;
-      engine.cancel();
-      engine.speak(utterance);
-    } catch (_) {
-      fallback();
-    }
-  }
-
   function returnHome() {
-    stopDetailTimer();
+    Speaker.stop();
+    window.clearTimeout(app.detailRevealTimeout);
+    window.clearTimeout(app.detailGateTimeout);
+    app.detailRevealTimeout = null;
+    app.detailGateTimeout = null;
+    app.detailReadyAt = 0;
     updateHome();
     setScreen("home");
   }
 
-  $("startButton").addEventListener("click", startSession);
+  $("startButton").addEventListener("click", function () {
+    Speaker.say("");
+    startSession();
+  });
   $("homeButton").addEventListener("click", returnHome);
   $("backupButton").addEventListener("click", createBackupCode);
   $("restoreButton").addEventListener("click", function () {
@@ -610,15 +591,24 @@
   $("validateRestoreButton").addEventListener("click", validateRestoreCode);
   $("confirmRestoreButton").addEventListener("click", confirmRestore);
   $("quitButton").addEventListener("click", function () { returnHome(); showToast("训练已结束，已完成的单词进度保留。 "); });
+  $("replayButton").addEventListener("click", function () {
+    if (app.current) Speaker.say(app.current.word.word);
+  });
   $("detailReplay").addEventListener("click", function () {
-    if (app.current) speak(app.current.word.word, app.current.word.word);
+    if (app.current) Speaker.say(app.current.word.word);
   });
   $("exampleButton").addEventListener("click", function () {
-    if (app.current) speak(app.current.word.example, app.current.word.word);
+    if (app.current) Speaker.say(app.current.word.example);
+  });
+  $("skipDetail").addEventListener("click", function () {
+    nextQuestion();
   });
   document.addEventListener("keydown", function (event) {
     if ($("gameView").hidden) return;
-    if (event.key === "Escape" && !$('wordDetail').hidden) nextQuestion();
+    if ($("wordDetail").hidden || (event.key !== "Enter" && event.key !== " ")) return;
+    if (event.target && typeof event.target.closest === "function" && event.target.closest("button")) return;
+    event.preventDefault();
+    nextQuestion();
   });
 
   updateHome();
