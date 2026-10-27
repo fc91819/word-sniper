@@ -1,9 +1,13 @@
 "use strict";
 
-const CACHE_NAME = "sniper-v4";
+importScripts("version.js");
+
+const CACHE_NAME = "sniper-" + APP_VERSION;
 const APP_FILES = [
   "index.html",
   "style.css",
+  "version.js",
+  "error-capture.js",
   "game.js",
   "audio.js",
   "backup.js",

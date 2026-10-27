@@ -371,12 +371,12 @@
     if (!$("wordDetail").hidden && Date.now() < app.detailReadyAt) return;
     window.clearTimeout(app.detailGateTimeout);
     app.detailGateTimeout = null;
-    Speaker.stop();
     $("skipDetail").disabled = false;
     app.detailReadyAt = 0;
     app.index += 1;
     app.answeredCurrent = false;
     app.correctionRequired = false;
+    try { Speaker.stop(); } catch (_) { /* Playback errors must not block question changes. */ }
     renderQuestion();
   }
 

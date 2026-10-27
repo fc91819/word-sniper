@@ -10,9 +10,15 @@
   let currentAudio = null;
   let preparedAudio = null;
   let preparedText = "";
+  let speechRequestToken = 0;
+  let speechRequestedAt = 0;
+  let speechStartedAt = 0;
+  let speechDidStart = false;
+  let speechEnded = false;
   const preferredVoiceNames = [
     "Samantha", "Ava", "Allison", "Susan", "Zoe", "Nicky", "Tom", "Alex",
-    "Aaron", "Evan", "Nathan", "Joelle", "Noelle"
+    "Aaron", "Evan", "Nathan", "Joelle", "Noelle", "Microsoft Zira", "Microsoft Aria",
+    "Microsoft Jenny", "Microsoft David", "Microsoft Mark", "English United States"
   ];
   const blockedVoiceNames = [
     "Albert", "Bad News", "Bahh", "Bells", "Boing", "Bubbles", "Cellos", "Good News",
@@ -31,11 +37,17 @@
 
   function isBlocked(voice) {
     const name = String(voice.name || "").toLowerCase();
-    return blockedVoiceNames.some(function (blocked) { return name.includes(blocked.toLowerCase()); });
+    return /google|online/i.test(name) || blockedVoiceNames.some(function (blocked) { return name.includes(blocked.toLowerCase()); });
+  }
+
+  function isLocalVoice(voice) {
+    return voice.localService === true && !isBlocked(voice);
   }
 
   function englishVoice(voices) {
-    const eligible = voices.filter(function (voice) { return isEnglish(voice) && !isBlocked(voice); });
+    const eligible = voices.filter(function (voice) {
+      return isLocalVoice(voice) && isEnglish(voice);
+    });
     const usVoices = eligible.filter(isUsEnglish);
 
     for (const preferredName of preferredVoiceNames) {
@@ -52,14 +64,20 @@
   }
 
   function updateVoiceStatus() {
-    const status = root.document && root.document.getElementById("voiceStatus");
-    if (status) status.textContent = "当前发音：" + (selectedVoice ? selectedVoice.name : "有道词典");
+    try {
+      const status = root.document && root.document.getElementById("voiceStatus");
+      if (status) {
+        status.textContent = selectedVoice
+          ? "当前发音：" + selectedVoice.name + "（本机）"
+          : "当前发音：有道词典（需联网）";
+      }
+    } catch (_) {}
   }
 
   function reportSelectedVoice() {
     updateVoiceStatus();
     if (selectedVoice && root.console && typeof root.console.info === "function") {
-      root.console.info("单词狙击手发音：" + selectedVoice.name + " " + selectedVoice.lang);
+      try { root.console.info("单词狙击手发音：" + selectedVoice.name + " " + selectedVoice.lang); } catch (_) {}
     }
   }
 
@@ -118,6 +136,29 @@
 
   function latest(token) {
     return token === sequence;
+  }
+
+  function speechIsStuck(now) {
+    if (!synthesis || !speechRequestToken) return false;
+    try {
+      if (!speechDidStart && !speechEnded && now - speechRequestedAt >= 3000) return true;
+      return Boolean(synthesis.speaking) && speechDidStart && !speechEnded && now - speechStartedAt >= 15000;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function trackSpeechRequest(utterance, token) {
+    speechRequestToken = token;
+    speechRequestedAt = Date.now();
+    speechStartedAt = 0;
+    speechDidStart = false;
+    speechEnded = false;
+    utterance.onstart = function () {
+      if (!latest(token)) return;
+      speechDidStart = true;
+      speechStartedAt = Date.now();
+    };
   }
 
   function clearAudio(audio) {
@@ -192,14 +233,17 @@
       if (!latest(token)) return;
       const error = String(event && event.error || "").toLowerCase();
       if (error === "interrupted" || error === "canceled") return;
+      speechEnded = true;
       // Speech synthesis is the selected engine for this page; do not mix in a second voice.
     };
     utterance.onend = function () {
       if (!latest(token)) return;
+      speechEnded = true;
     };
     const start = function () {
       if (!latest(token)) return;
       try {
+        trackSpeechRequest(utterance, token);
         synthesis.speak(utterance);
       } catch (_) {
         // Keep the selected engine stable for the page instead of mixing voices.
@@ -221,13 +265,18 @@
         if (!latest(token)) return;
         const error = String(event && event.error || "").toLowerCase();
         if (error === "interrupted" || error === "canceled") return;
+        speechEnded = true;
       };
       utterance.onend = function () {
         if (!latest(token)) return;
+        speechEnded = true;
       };
       const start = function () {
         if (!latest(token)) return;
-        try { synthesis.speak(utterance); } catch (_) { /* Unlocking is best-effort. */ }
+        try {
+          trackSpeechRequest(utterance, token);
+          synthesis.speak(utterance);
+        } catch (_) { /* Unlocking is best-effort. */ }
       };
       if (shouldDelaySpeech) root.setTimeout(start, 80);
       else start();
@@ -267,46 +316,70 @@
   }
 
   function say(text) {
-    const token = ++sequence;
-    const phrase = String(text == null ? "" : text);
-    let reusableAudio = null;
-    if (preparedAudio && preparedText === phrase) {
-      reusableAudio = preparedAudio;
-      preparedAudio = null;
-      preparedText = "";
-    }
-    const shouldDelaySpeech = stopCurrent();
-    if (!phrase.trim()) {
-      discardPrepared();
-      unlockSpeech(token, shouldDelaySpeech);
-      return;
-    }
-
-    voicesReady.then(function () {
-      if (!latest(token)) return;
-      if (engine === "speech" && selectedVoice) {
-        if (reusableAudio) clearAudio(reusableAudio);
+    try {
+      const wasStuck = speechIsStuck(Date.now());
+      const token = ++sequence;
+      const phrase = String(text == null ? "" : text);
+      let reusableAudio = null;
+      if (preparedAudio && preparedText === phrase) {
+        reusableAudio = preparedAudio;
+        preparedAudio = null;
+        preparedText = "";
+      }
+      // Every new request cancels first; this also clears an engine detected as stuck above.
+      const shouldDelaySpeech = stopCurrent();
+      if (!phrase.trim()) {
         discardPrepared();
-        playSpeech(phrase, token, shouldDelaySpeech);
+        unlockSpeech(token, shouldDelaySpeech);
         return;
       }
-      playYoudao(phrase, token, reusableAudio);
-    });
+
+      voicesReady.then(function () {
+        try {
+          if (!latest(token)) return;
+          if (engine === "speech" && selectedVoice) {
+            if (reusableAudio) clearAudio(reusableAudio);
+            discardPrepared();
+            playSpeech(phrase, token, shouldDelaySpeech);
+            return;
+          }
+          playYoudao(phrase, token, reusableAudio);
+        } catch (_) {}
+      }, function () {});
+      if (wasStuck) {
+        speechRequestToken = 0;
+        speechDidStart = false;
+        speechEnded = true;
+      }
+    } catch (_) {
+      try { sequence += 1; } catch (_) {}
+      try { stopCurrent(); } catch (_) {}
+      try { discardPrepared(); } catch (_) {}
+    }
   }
 
   function stop() {
-    sequence += 1;
-    stopCurrent();
-    discardPrepared();
+    try {
+      sequence += 1;
+      stopCurrent();
+      discardPrepared();
+      speechRequestToken = 0;
+      speechDidStart = false;
+      speechEnded = true;
+    } catch (_) {
+      // Playback control is best-effort; callers must always be able to continue.
+    }
   }
 
   if (root.document && typeof root.document.addEventListener === "function") {
     root.document.addEventListener("sniper:question", function () {
       const token = sequence;
       voicesReady.then(function () {
-        if (!latest(token) || engine !== "youdao") return;
-        preloadNext("", token);
-      });
+        try {
+          if (!latest(token) || engine !== "youdao") return;
+          preloadNext("", token);
+        } catch (_) {}
+      }, function () {});
     });
   }
 

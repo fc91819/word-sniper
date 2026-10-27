@@ -72,8 +72,8 @@ async function selectVoice(voices) {
   };
 }
 
-const voice = function (name, lang = "en-US", isDefault = false) {
-  return { name, lang, default: isDefault };
+const voice = function (name, lang = "en-US", isDefault = false, localService = true) {
+  return { name, lang, default: isDefault, localService };
 };
 
 const cases = [
@@ -111,7 +111,34 @@ for (const testCase of cases) {
 const blacklistOnly = await selectVoice([voice("Albert"), voice("Bad News"), voice("Pipe Organ")]);
 assert.equal(blacklistOnly.voice, null, "blacklisted voices must not be selected");
 assert.equal(blacklistOnly.audioCount, 1, "blacklist-only list must use Youdao");
-assert.equal(blacklistOnly.status, "当前发音：有道词典");
+assert.equal(blacklistOnly.status, "当前发音：有道词典（需联网）");
 selected.push("有道");
+
+const windowsLocal = await selectVoice([
+  voice("Google US English", "en-US", false, false),
+  voice("Microsoft Zira", "en-US", false, true)
+]);
+assert.equal(windowsLocal.voice && windowsLocal.voice.name, "Microsoft Zira", "case f voice");
+assert.equal(windowsLocal.audioCount, 0, "case f should use local speech synthesis");
+assert.equal(windowsLocal.status, "当前发音：Microsoft Zira（本机）");
+selected.push("Microsoft Zira");
+
+const onlineOnly = await selectVoice([
+  voice("Google US English", "en-US", false, false),
+  voice("Microsoft Aria Online (Natural)", "en-US", false, false)
+]);
+assert.equal(onlineOnly.voice, null, "case g online voices must be rejected");
+assert.equal(onlineOnly.audioCount, 1, "case g should use Youdao");
+assert.equal(onlineOnly.status, "当前发音：有道词典（需联网）");
+selected.push("有道");
+
+const localPreferred = await selectVoice([
+  voice("Google US English", "en-US", false, false),
+  voice("Samantha", "en-US", false, true)
+]);
+assert.equal(localPreferred.voice && localPreferred.voice.name, "Samantha", "case h voice");
+assert.equal(localPreferred.audioCount, 0, "case h should use local speech synthesis");
+assert.equal(localPreferred.status, "当前发音：Samantha（本机）");
+selected.push("Samantha");
 
 console.log("语音选择通过：" + selected.map(function (name, index) { return String.fromCharCode(97 + index) + ") " + name; }).join("；"));

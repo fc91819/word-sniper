@@ -82,7 +82,7 @@
         </div>
       </section>
 
-      <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i></span></footer>
+      <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i><small id="appVersion" class="app-version"></small></span></footer>
     </section>
 
     <section id="gameView" class="screen game-screen" hidden aria-live="polite">
@@ -154,9 +154,12 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <button id="errorNotice" class="error-notice" type="button" hidden aria-live="assertive"></button>
     <input id="nextAudioWord" type="hidden" value="">
     <footer class="site-footer"><span>NO SERVER · PROGRESS ON THIS DEVICE</span><span>✣ &nbsp; AIM · SPELL · REMEMBER</span></footer>
   </main>
+  <script src="version.js"></script>
+  <script src="error-capture.js"></script>
   <script src="srs.js"></script>
   <script src="backup.js"></script>
   <script src="words.js"></script>

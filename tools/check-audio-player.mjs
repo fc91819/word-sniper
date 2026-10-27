@@ -11,6 +11,10 @@ let activeUtterance = null;
 let createdAudio = 0;
 let playedAudio = 0;
 let interruptedCount = 0;
+let now = 1000;
+let throwCancel = false;
+let throwSpeak = false;
+const speechEvents = [];
 const interruptedTexts = [];
 let nextTimerId = 0;
 const timers = new Map();
@@ -37,10 +41,17 @@ class MockAudio {
 const synthesis = {
   speaking: false,
   pending: false,
-  getVoices() { return [{ lang: "en-US", name: "Test English" }]; },
+  getVoices() { return [{ lang: "en-US", name: "Test English", localService: true }]; },
   addEventListener() {},
   removeEventListener() {},
   cancel() {
+    speechEvents.push("cancel");
+    if (throwCancel) {
+      this.speaking = false;
+      this.pending = false;
+      activeUtterance = null;
+      throw new Error("simulated cancel failure");
+    }
     const interrupted = activeUtterance;
     activeUtterance = null;
     this.speaking = false;
@@ -51,7 +62,12 @@ const synthesis = {
       queueMicrotask(function () { interrupted.onerror({ error: "interrupted" }); });
     }
   },
-  speak(utterance) { activeUtterance = utterance; this.speaking = true; }
+  speak(utterance) {
+    speechEvents.push("speak:" + utterance.text);
+    if (throwSpeak) throw new Error("simulated speak failure");
+    activeUtterance = utterance;
+    this.speaking = true;
+  }
 };
 
 const document = { addEventListener() {}, getElementById() { return null; } };
@@ -66,7 +82,7 @@ const window = {
   },
   clearTimeout(id) { timers.delete(id); }
 };
-const context = vm.createContext({ window, Audio: MockAudio, Promise, encodeURIComponent, queueMicrotask });
+const context = vm.createContext({ window, Audio: MockAudio, Promise, Date: { now() { return now; } }, encodeURIComponent, queueMicrotask });
 vm.runInContext(source, context, { filename: "audio.js" });
 
 const flush = async function () {
@@ -126,4 +142,27 @@ unlockTimer[1].callback();
 assert.equal(activeUtterance && activeUtterance.text, " ", "the unlock utterance should contain one space");
 assert.equal(activeUtterance.volume, 0, "the unlock utterance should be silent");
 
-console.log("模拟播放通过：只有 cat 完成播放；旧 interrupted 与过期延迟回调均忽略；80ms 延迟及空格静音解锁通过；未启动有道音频。");
+window.Speaker.stop();
+now = 10000;
+window.Speaker.say("hung");
+await flush();
+assert.equal(activeUtterance && activeUtterance.text, "hung", "the simulated stuck utterance should be issued");
+now = 13101;
+speechEvents.length = 0;
+window.Speaker.say("recovered");
+await flush();
+const hangRecoveryTimer = Array.from(timers.entries()).find(([, timer]) => timer.delay === 80);
+assert.ok(hangRecoveryTimer, "speaking without onstart should be detected as a hung utterance");
+timers.delete(hangRecoveryTimer[0]);
+hangRecoveryTimer[1].callback();
+assert.equal(activeUtterance && activeUtterance.text, "recovered", "the next utterance should play after canceling a hang");
+assert.ok(speechEvents.indexOf("cancel") >= 0 && speechEvents.indexOf("cancel") < speechEvents.indexOf("speak:recovered"), "hung playback should be canceled before recovery speaks");
+
+window.Speaker.stop();
+throwCancel = true;
+throwSpeak = true;
+assert.doesNotThrow(function () { window.Speaker.say("failure-safe"); }, "say should swallow cancel failures");
+await flush();
+assert.doesNotThrow(function () { window.Speaker.stop(); }, "stop should swallow cancel failures");
+
+console.log("模拟播放通过：仅 cat 完成首轮播放；过期回调忽略；80ms 延迟、空格静音解锁和卡死恢复通过；cancel/speak 异常未向外抛出。");
