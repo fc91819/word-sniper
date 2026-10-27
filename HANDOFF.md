@@ -20,6 +20,6 @@
 
 ## 进度
 - 第一阶段及 D-003 修复已通过总监验收；词库自动校验为 0 问题。
-- D-005 的 PWA、离线缓存和进度备份码已准备，GitHub Pages 尚未发布，等待家长账号并由总监继续安排。
+- 已发布（2026-10-26）：https://fc91819.github.io/word-sniper/ ，仓库 https://github.com/fc91819/word-sniper（公开，main 分支根目录即 Pages）。本机 gh 位于 ~/.local/bin/gh，已登录 fc91819。发布流程：改完代码 → 改 service-worker.js 的缓存版本号 → commit → git push，1~3 分钟后线上更新。线上已验证：service worker 激活、缓存 10 个文件、200 词加载、控制台无报错。
 - 2026-10-26 总监浏览器实测通过：service worker 激活并缓存 11 个文件，断开服务后页面仍能打开；备份→清空→恢复，数据完全一致。待发布后在 iPad 上实机验收：添加到主屏幕、离线启动、系统键盘遮挡、状态栏留白。
 - ill 的中文释义已改为“生病的”。
