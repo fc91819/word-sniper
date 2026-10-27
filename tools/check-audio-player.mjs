@@ -109,6 +109,8 @@ await flush();
 
 assert.equal(activeUtterance && activeUtterance.text, "cat", "only the newest utterance should remain active");
 assert.equal(activeUtterance.rate, 0.9, "speech playback should use the requested rate");
+activeUtterance.onstart();
+now += 500;
 activeUtterance.onend();
 heard.push(activeUtterance.text);
 activeUtterance = null;

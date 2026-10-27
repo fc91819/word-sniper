@@ -59,10 +59,36 @@
           <button id="backupButton" class="backup-action" type="button">备份进度</button>
           <button id="restoreButton" class="backup-action" type="button">恢复进度</button>
           <div class="audio-preview">
-            <button id="previewAudioButton" class="backup-action" type="button">试听发音</button>
+            <div class="audio-preview-actions">
+              <button id="previewAudioButton" class="backup-action" type="button">试听发音</button>
+              <button id="openAudioDiagnostics" class="backup-action diagnostic-open" type="button">发音检测</button>
+            </div>
             <small id="voiceStatus" class="voice-status" aria-live="polite">正在检测当前发音…</small>
           </div>
         </div>
+        <section id="audioDiagnostics" class="audio-diagnostics" hidden aria-labelledby="audioDiagnosticsTitle">
+          <div class="audio-diagnostics-heading">
+            <h3 id="audioDiagnosticsTitle">发音检测</h3>
+            <button id="closeAudioDiagnostics" class="diagnostic-close" type="button">关闭</button>
+          </div>
+          <p id="audioDiagnosticInfo" class="audio-diagnostic-info"></p>
+          <div class="audio-diagnostic-row">
+            <span id="diagnosticVoiceLabel">指定声音：正在检测</span>
+            <button id="testSelectedVoice" class="backup-action" type="button">试一下</button>
+            <small id="diagnosticVoiceResult" class="audio-diagnostic-result" aria-live="polite"></small>
+          </div>
+          <div class="audio-diagnostic-row">
+            <span>系统默认声音</span>
+            <button id="testDefaultVoice" class="backup-action" type="button">试一下</button>
+            <small id="diagnosticDefaultResult" class="audio-diagnostic-result" aria-live="polite"></small>
+          </div>
+          <div class="audio-diagnostic-row">
+            <span>有道在线发音</span>
+            <button id="testYoudaoVoice" class="backup-action" type="button">试一下</button>
+            <small id="diagnosticYoudaoResult" class="audio-diagnostic-result" aria-live="polite"></small>
+          </div>
+          <p class="audio-diagnostic-tip">如果都没有声音，请检查手机是否静音、音量是否调大；拍下这个页面发给家长。</p>
+        </section>
         <div id="backupTools" class="backup-tools" hidden>
           <div id="backupExportPane" hidden>
             <label class="backup-label" for="backupCode">进度备份码</label>
@@ -152,6 +178,7 @@
     </section>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <small id="audioTapHint" class="audio-tap-hint" role="status" aria-live="polite" hidden>点一下 🔊 按钮播放发音</small>
     <button id="errorNotice" class="error-notice" type="button" hidden aria-live="assertive"></button>
     <input id="nextAudioWord" type="hidden" value="">
     <footer class="site-footer"><span>NO SERVER · PROGRESS ON THIS DEVICE</span><span>✣ &nbsp; AIM · SPELL · REMEMBER</span></footer>

@@ -34,7 +34,10 @@ async function selectVoice(voices) {
     addEventListener() {},
     removeEventListener() {},
     cancel() { this.speaking = false; this.pending = false; },
-    speak(utterance) { utterances.push(utterance); }
+    speak(utterance) {
+      utterances.push(utterance);
+      if (utterance.onstart) utterance.onstart();
+    }
   };
   const document = {
     addEventListener() {},

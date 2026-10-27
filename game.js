@@ -463,6 +463,50 @@
     app.toastTimeout = window.setTimeout(function () { toast.classList.remove("show"); }, 2200);
   }
 
+  function populateAudioDiagnostics() {
+    const voiceStatus = $("voiceStatus");
+    const selectedVoice = voiceStatus.dataset && voiceStatus.dataset.selectedVoiceName
+      ? voiceStatus.dataset.selectedVoiceName
+      : "未找到";
+    const englishVoiceCount = voiceStatus.dataset && voiceStatus.dataset.englishVoiceCount || "0";
+    const localEnglishVoiceCount = voiceStatus.dataset && voiceStatus.dataset.localEnglishVoiceCount || "0";
+    let standalone = navigator.standalone === true;
+    try {
+      standalone = standalone || Boolean(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    } catch (_) {}
+    const lines = [
+      "版本：" + (window.APP_VERSION || "未知"),
+      "浏览器：" + String(navigator.userAgent || "未知").slice(0, 120),
+      "从主屏幕打开：" + (standalone ? "是" : "否"),
+      "英文语音总数：" + englishVoiceCount,
+      "本机英文语音总数：" + localEnglishVoiceCount,
+      "当前选中的声音名：" + selectedVoice
+    ];
+    $("audioDiagnosticInfo").textContent = lines.join("\n");
+    $("diagnosticVoiceLabel").textContent = "指定声音：" + selectedVoice;
+  }
+
+  function formatAudioTestResult(result) {
+    if (!result) return "✗ 出错：unknown";
+    if (result.type === "started") return "✓ 已开始播放（" + Number(result.seconds || 0).toFixed(2) + " 秒）";
+    if (result.type === "no-start") return "✗ 1.5 秒没开始";
+    if (result.type === "immediate-end") return "✗ 立刻结束";
+    if (result.type === "rejected") return "✗ 被拒绝播放";
+    if (result.type === "canceled") return "✗ 已取消";
+    return "✗ 出错：" + (result.error || result.type || "unknown");
+  }
+
+  function attachAudioTest(buttonId, resultId, testLevel) {
+    $(buttonId).addEventListener("click", function () {
+      const result = $(resultId);
+      result.textContent = "检测中…";
+      Speaker.say("Hello, let's learn English.", {
+        testLevel: testLevel,
+        onTestResult: function (outcome) { result.textContent = formatAudioTestResult(outcome); }
+      });
+    });
+  }
+
   function updateBackupReminder() {
     let lastBackup = null;
     try {
@@ -575,12 +619,24 @@
   }
 
   $("startButton").addEventListener("click", function () {
+    $("audioDiagnostics").hidden = true;
     Speaker.say(" ");
     startSession();
   });
   $("previewAudioButton").addEventListener("click", function () {
     Speaker.say("Hello, let's learn English.");
   });
+  $("openAudioDiagnostics").addEventListener("click", function () {
+    populateAudioDiagnostics();
+    $("audioDiagnostics").hidden = false;
+  });
+  $("closeAudioDiagnostics").addEventListener("click", function () {
+    $("audioDiagnostics").hidden = true;
+    Speaker.stop();
+  });
+  attachAudioTest("testSelectedVoice", "diagnosticVoiceResult", 0);
+  attachAudioTest("testDefaultVoice", "diagnosticDefaultResult", 1);
+  attachAudioTest("testYoudaoVoice", "diagnosticYoudaoResult", 2);
   $("homeButton").addEventListener("click", returnHome);
   $("backupButton").addEventListener("click", createBackupCode);
   $("restoreButton").addEventListener("click", function () {
