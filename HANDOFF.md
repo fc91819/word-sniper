@@ -36,4 +36,4 @@
 - D-011 音效（未命中改为卡壳声，见 D-013）指令已下发执手。
 - 2026-10-27 总监线上验收 v9（D-011/D-013）：音效开关默认开；命中先出"叮"，约 0.44 秒后才读单词，不叠音；未命中合成两段带通噪声加一个短低音（卡壳声），1.5 秒后讲解卡读出正确单词。实际听感待家长在手机上试听确认。
 - 家长试听 v9：命中要狙击枪声、卡壳声不明显（D-014），修复指令已下发执手。
-- D-014：版本升至 v10；命中使用三层 Web Audio 枪声合成与 1.2 秒程序回声，卡壳声改为两段加长的金属空击并增加尾音；命中后 500ms 显示讲解卡，开始读词时枪声降至 14%。检测面板显示命中/卡壳当前来源。已找到并核对明确标为 CC0 的候选页（OpenGameArt Free Firearm Sound Library：https://opengameart.org/content/the-free-firearm-sound-library，页面提供 194MB 的压缩包；Freesound Dry_Fire.wav：https://freesound.org/people/TampaJoey/sounds/588733/，页面要求登录下载），但当前环境缺少 ffmpeg、ffprobe；未把未经裁切/编码/验收的录音放进仓库，使用 D-014 合成兜底。录音缓存列表和 `sounds/` 文件暂不加入。
+- D-014：版本升至 v10；命中使用三层 Web Audio 枪声合成与 1.2 秒程序回声，卡壳声改为两段加长的金属空击并增加尾音；命中后 500ms 显示讲解卡，开始读词时枪声降至 14%。检测面板显示命中/卡壳当前来源。已找到并核对明确标为 CC0 的候选页（OpenGameArt Free Firearm Sound Library：https://opengameart.org/content/the-free-firearm-sound-library，页面提供 194MB 的压缩包；Freesound Dry_Fire.wav：https://freesound.org/people/TampaJoey/sounds/588733/，页面要求登录下载），但当前环境缺少 ffmpeg、ffprobe；未把未经裁切/编码/验收的录音放进仓库，使用 D-014 合成兜底。相关模拟检查及所有既有检查通过，已推送；GitHub Pages 的 `version.js` 返回 v10。录音缓存列表和 `sounds/` 文件暂不加入。
