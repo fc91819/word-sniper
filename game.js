@@ -17,6 +17,7 @@
     session: null,
     detailRevealTimeout: null,
     detailGateTimeout: null,
+    detailSpeechTimeout: null,
     detailReadyAt: 0,
     toastTimeout: null,
     correctionRequired: false,
@@ -284,6 +285,10 @@
     app.session.score += 10 * multiplier();
   }
 
+  function playSfx(name) {
+    try { return Sfx[name]() || 0; } catch (_) { return 0; }
+  }
+
   function answerAim(selectedWord, clickedTarget) {
     if (app.answeredCurrent) return;
     app.answeredCurrent = true;
@@ -300,19 +305,24 @@
     app.session.totalAnswers += 1;
     if (correct) {
       app.session.correctAnswers += 1;
+      const previousMultiplier = multiplier();
       updateCombo(true);
+      const upgradedMultiplier = multiplier() > previousMultiplier;
       SRS.recordAttempt(app.progress, item, true, app.date);
+      const hitDuration = playSfx("hit");
+      const comboDuration = upgradedMultiplier ? playSfx("combo") : 0;
       clickedTarget.classList.add("hit");
       $("feedback").textContent = "命中！";
       $("feedback").className = "feedback good";
       updateHud();
-      scheduleWordDetail(item, 420);
+      scheduleWordDetail(item, Math.max(420, hitDuration + comboDuration + 200));
     } else {
       app.session.lives = Math.max(0, app.session.lives - 1);
       updateCombo(false);
       markWrong(item);
       scheduleRetry(item);
       SRS.recordAttempt(app.progress, item, false, app.date);
+      playSfx("miss");
       $("feedback").textContent = "未命中 · 正确答案已标出";
       $("feedback").className = "feedback bad";
       updateHud();
@@ -332,10 +342,11 @@
         return;
       }
       app.correctionRequired = false;
+      playSfx("reload");
       $("feedback").textContent = "装弹完成。";
       $("feedback").className = "feedback good";
       $("spellInput").disabled = true;
-      showWordDetail(item);
+      showWordDetail(item, 200);
       return;
     }
     app.answeredCurrent = true;
@@ -361,11 +372,12 @@
     app.session.correctAnswers += 1;
     updateCombo(true);
     SRS.recordAttempt(app.progress, item, true, app.date);
+    playSfx("reload");
     $("spellInput").disabled = true;
     $("feedback").textContent = "装弹完成 · 开火命中";
     $("feedback").className = "feedback good";
     updateHud();
-    showWordDetail(item);
+    showWordDetail(item, 200);
   }
 
   function scheduleWordDetail(item, delay) {
@@ -376,9 +388,11 @@
     }, delay);
   }
 
-  function showWordDetail(item) {
+  function showWordDetail(item, speechDelayMs) {
     Speaker.stop();
     window.clearTimeout(app.detailGateTimeout);
+    window.clearTimeout(app.detailSpeechTimeout);
+    app.detailSpeechTimeout = null;
     $("questionPanel").hidden = true;
     $("wordDetail").hidden = false;
     $("detailWord").textContent = item.word.word;
@@ -394,13 +408,22 @@
       if (!$("wordDetail").hidden) $("skipDetail").disabled = false;
     }, 800);
     $("wordDetail").focus();
-    Speaker.say(item.word.word);
+    if (speechDelayMs > 0) {
+      app.detailSpeechTimeout = window.setTimeout(function () {
+        app.detailSpeechTimeout = null;
+        if (!$("gameView").hidden && !$("wordDetail").hidden) Speaker.say(item.word.word);
+      }, speechDelayMs);
+    } else {
+      Speaker.say(item.word.word);
+    }
   }
 
   function nextQuestion() {
     if (!$("wordDetail").hidden && Date.now() < app.detailReadyAt) return;
     window.clearTimeout(app.detailGateTimeout);
+    window.clearTimeout(app.detailSpeechTimeout);
     app.detailGateTimeout = null;
+    app.detailSpeechTimeout = null;
     $("skipDetail").disabled = false;
     app.detailReadyAt = 0;
     app.index += 1;
@@ -427,6 +450,8 @@
     Speaker.stop();
     window.clearTimeout(app.detailRevealTimeout);
     window.clearTimeout(app.detailGateTimeout);
+    window.clearTimeout(app.detailSpeechTimeout);
+    app.detailSpeechTimeout = null;
     SRS.completeSession(app.progress, app.date);
     SRS.saveProgress(app.progress);
     const accuracy = app.session.totalAnswers ? Math.round((app.session.correctAnswers / app.session.totalAnswers) * 100) : 0;
@@ -605,21 +630,49 @@
   }
 
   let restoreCandidate = null;
+  const SFX_STORAGE_KEY = "wordSniperSfxEnabled.v1";
+  function readSfxEnabled() {
+    try {
+      const saved = window.localStorage.getItem(SFX_STORAGE_KEY);
+      return saved === null || saved !== "false";
+    } catch (_) {
+      return true;
+    }
+  }
+  let sfxEnabled = readSfxEnabled();
+  try { Sfx.setEnabled(sfxEnabled); } catch (_) {}
+
+  function updateSfxToggle() {
+    const button = $("sfxToggle");
+    button.textContent = "音效：" + (sfxEnabled ? "开" : "关");
+    button.setAttribute("aria-pressed", String(sfxEnabled));
+  }
 
   function returnHome() {
     Speaker.stop();
     window.clearTimeout(app.detailRevealTimeout);
     window.clearTimeout(app.detailGateTimeout);
+    window.clearTimeout(app.detailSpeechTimeout);
     app.detailRevealTimeout = null;
     app.detailGateTimeout = null;
+    app.detailSpeechTimeout = null;
     app.detailReadyAt = 0;
     updateHome();
     setScreen("home");
     if (workerLifecycle) workerLifecycle.onHome();
   }
 
+  updateSfxToggle();
+  $("sfxToggle").addEventListener("click", function () {
+    sfxEnabled = !sfxEnabled;
+    try { window.localStorage.setItem(SFX_STORAGE_KEY, String(sfxEnabled)); } catch (_) {}
+    try { Sfx.setEnabled(sfxEnabled); } catch (_) {}
+    updateSfxToggle();
+  });
+
   $("startButton").addEventListener("click", function () {
     $("audioDiagnostics").hidden = true;
+    try { Sfx.unlock(); } catch (_) {}
     Speaker.say(" ");
     startSession();
   });
@@ -650,6 +703,12 @@
     Speaker.say("Hello, let's learn English.", {
       testLevel: 3,
       onTestResult: function (outcome) { result.textContent = formatAudioTestResult(outcome); }
+    });
+  });
+  [["testSfxHit", "hit"], ["testSfxCombo", "combo"], ["testSfxMiss", "miss"], ["testSfxReload", "reload"]].forEach(function (entry) {
+    $(entry[0]).addEventListener("click", function () {
+      try { Sfx.unlock(); } catch (_) {}
+      playSfx(entry[1]);
     });
   });
   $("homeButton").addEventListener("click", returnHome);

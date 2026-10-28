@@ -108,6 +108,9 @@ h1, h2, p { margin-top: 0; }
 .diagnostic-close { min-height: 34px; padding: 6px 11px; border: 1px solid #435743; color: #c5d0c3; background: #202b22; cursor: pointer; font-size: 11px; }
 .audio-diagnostic-info { margin: 0; color: #8d9b8f; font-family: var(--mono); font-size: 9px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .audio-diagnostic-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px 10px; padding-top: 8px; border-top: 1px solid #29372c; color: #c8d2c7; font-size: 11px; }
+.sfx-preview-row { grid-template-columns: 1fr; }
+.sfx-sample-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.sfx-sample-buttons .backup-action { min-height: 32px; padding: 6px 10px; font-size: 10px; }
 .audio-diagnostic-result { grid-column: 1 / -1; min-height: 14px; color: #98ae91; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .audio-diagnostic-tip { margin: 0; color: #b9c1b7; font-size: 10px; line-height: 1.5; }
 .backup-action { min-height: 37px; padding: 8px 12px; border: 1px solid #435743; border-radius: 2px; color: #d6e2d3; background: #202b22; cursor: pointer; font-size: 11px; }
@@ -128,6 +131,7 @@ h1, h2, p { margin-top: 0; }
 .app-version { margin-left: 5px; color: #829082; font-size: 8px; font-style: normal; letter-spacing: .04em; }
 .home-footer { margin-top: 23px; }
 .home-footer span:last-child { display: flex; align-items: center; gap: 8px; }
+.sfx-toggle { min-height: 30px; padding: 5px 9px; font-size: 10px; letter-spacing: 0; }
 .footer-led { display: inline-block; width: 5px; height: 5px; }
 .site-footer { min-height: 35px; border-top: 1px solid #2c382e; }
 

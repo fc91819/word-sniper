@@ -13,6 +13,7 @@ const APP_FILES = [
   "backup.js",
   "srs.js",
   "words.js",
+  "sfx.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",

@@ -11,13 +11,14 @@
 - `game.js`：训练流程、题目切换、结算、进度交互及 Service Worker 注册。
 - `service-worker.js`：版本隔离缓存、离线导航和新版自动接管。
 - `audio.js`：本机语音选择、三级无声自动回退、发音检测结果和播放卡死恢复。
+- `sfx.js`：Web Audio API 现场合成命中、连击、卡壳和装弹音效；独立于单词发音播放器。
 - `srs.js`：复习调度、模拟日期、连续打卡和 localStorage 进度。
 - `words.js`：200 个分话题词库，挂载到全局变量 `WORDS`。
 - `backup.js`：进度备份码、校验和恢复数据验证。
 - `version.js`：应用和 Service Worker 共用的版本常量。
 - `error-capture.js`：首页版本显示和全局错误提示。
 - `manifest.webmanifest`、`icons/`：PWA 安装信息和图标。
-- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`：词库、选声、播放器、发音回退、切题和 Service Worker 模拟检查。
+- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-sfx.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`：词库、选声、播放器、发音回退、音效、切题和 Service Worker 模拟检查。
 - `README.md`：玩法、运行、数据和 Pages 发布说明。
 - `DECISIONS.md`：追加式决策台账；D-008 由总监提供。
 
@@ -26,8 +27,10 @@
 - D-009：Service Worker 只查当前版本缓存；导航固定用当前缓存首页；新版自动接管，训练或结算中延迟到回首页再刷新。已上线，版本为 v6。
 - D-010：语音失败时按指定声音、系统默认声音、有道顺序自动回退；首页新增发音检测面板。实现和模拟检查已完成并推送；Pages 已部署，线上 `version.js` 返回 v7。
 - D-012：第 3 级在线发音按文本分流，单词使用有道、句子使用百度；页面禁止发送来源网址。实现和本地检查已完成并推送；Pages 已部署，线上 `version.js` 返回 v8。百度句子接口无 Referer 请求返回 `audio/mpeg`。
+- D-011 / D-013：独立 Web Audio 音效引擎、命中与连击音效错开讲解卡、拼写完成装弹音、未命中卡壳声和首页音效开关已实现；本地模拟测试通过，版本升至 v9，待推送及线上核验。
 - 2026-10-26 总监线上验收 v6（D-009）：从 v5 打开后，v6 在后台自动接管，旧缓存清掉；再次打开即为 v6，没有混搭。完整一局 12 题：每题读词、读整句例句、下一题均正常，无报错。待家长在 iPad 上确认。
 - 2026-10-27 家长 iPhone 实测：显示 Samantha（本机）、v6，一开始关静音、调大音量后仍无声，约一分钟后自行恢复，原因未定位。D-010（无声自动换路 + 发音检测面板）作为预防措施，家长已同意并下发指令。
 - D-011 游戏音效：家长同意试做，等 D-010 验收通过后再下发给执手。
 - 2026-10-27 总监线上验收 v7（D-010）：v6 自动升到 v7；发音检测面板正常；模拟本机语音无声时，会依次换到系统默认声音、有道；完整一局 12 题正常。发现有道读不了句子（D-012），修复指令已下发执手；D-011 音效排在 D-012 之后。
 - 2026-10-27 总监线上验收 v8（D-012）：页面已设 no-referrer；第 3 级读单词走有道、读句子走百度。D-011 音效可以下发执手。
+- D-011 音效（未命中改为卡壳声，见 D-013）指令已下发执手。

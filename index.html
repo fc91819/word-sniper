@@ -93,6 +93,15 @@
             <button id="testBaiduVoice" class="backup-action" type="button">试一下</button>
             <small id="diagnosticBaiduResult" class="audio-diagnostic-result" aria-live="polite"></small>
           </div>
+          <div class="audio-diagnostic-row sfx-preview-row">
+            <span>游戏音效</span>
+            <div class="sfx-sample-buttons">
+              <button id="testSfxHit" class="backup-action" type="button">命中</button>
+              <button id="testSfxCombo" class="backup-action" type="button">连击</button>
+              <button id="testSfxMiss" class="backup-action" type="button">卡壳</button>
+              <button id="testSfxReload" class="backup-action" type="button">装弹</button>
+            </div>
+          </div>
           <p class="audio-diagnostic-tip">如果都没有声音，请检查手机是否静音、音量是否调大；拍下这个页面发给家长。</p>
         </section>
         <div id="backupTools" class="backup-tools" hidden>
@@ -112,7 +121,7 @@
         </div>
       </section>
 
-      <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i><small id="appVersion" class="app-version"></small></span></footer>
+      <footer class="home-footer"><span>训练建议：每天一局 · 约 5–8 分钟</span><span>LOCAL OPERATION <i class="footer-led"></i><small id="appVersion" class="app-version"></small><button id="sfxToggle" class="backup-action sfx-toggle" type="button" aria-pressed="true">音效：开</button></span></footer>
     </section>
 
     <section id="gameView" class="screen game-screen" hidden aria-live="polite">
@@ -195,6 +204,7 @@
   <script src="backup.js"></script>
   <script src="words.js"></script>
   <script src="audio.js"></script>
+  <script src="sfx.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
