@@ -247,7 +247,7 @@
       if (event.key === "Enter") { event.preventDefault(); submitSpelling(); }
     };
     renderKeyboard();
-    Speaker.say(item.word.word);
+    sayLearningAudio(item.word.word);
   }
 
   function insertLetter(letter) {
@@ -289,6 +289,19 @@
     try { return Sfx[name]() || 0; } catch (_) { return 0; }
   }
 
+  function sayLearningAudio(text, options) {
+    try {
+      const SpeechEvent = window.Event;
+      if (SpeechEvent) document.dispatchEvent(new SpeechEvent("sniper-word-speech"));
+      else if (document.createEvent) {
+        const event = document.createEvent("Event");
+        event.initEvent("sniper-word-speech", false, false);
+        document.dispatchEvent(event);
+      }
+    } catch (_) {}
+    return Speaker.say(text, options);
+  }
+
   function answerAim(selectedWord, clickedTarget) {
     if (app.answeredCurrent) return;
     app.answeredCurrent = true;
@@ -309,13 +322,13 @@
       updateCombo(true);
       const upgradedMultiplier = multiplier() > previousMultiplier;
       SRS.recordAttempt(app.progress, item, true, app.date);
-      const hitDuration = playSfx("hit");
-      const comboDuration = upgradedMultiplier ? playSfx("combo") : 0;
+      playSfx("hit");
+      if (upgradedMultiplier) playSfx("combo");
       clickedTarget.classList.add("hit");
       $("feedback").textContent = "命中！";
       $("feedback").className = "feedback good";
       updateHud();
-      scheduleWordDetail(item, Math.max(420, hitDuration + comboDuration + 200));
+      scheduleWordDetail(item, 500);
     } else {
       app.session.lives = Math.max(0, app.session.lives - 1);
       updateCombo(false);
@@ -411,10 +424,10 @@
     if (speechDelayMs > 0) {
       app.detailSpeechTimeout = window.setTimeout(function () {
         app.detailSpeechTimeout = null;
-        if (!$("gameView").hidden && !$("wordDetail").hidden) Speaker.say(item.word.word);
+        if (!$("gameView").hidden && !$("wordDetail").hidden) sayLearningAudio(item.word.word);
       }, speechDelayMs);
     } else {
-      Speaker.say(item.word.word);
+      sayLearningAudio(item.word.word);
     }
   }
 
@@ -738,13 +751,13 @@
   $("confirmRestoreButton").addEventListener("click", confirmRestore);
   $("quitButton").addEventListener("click", function () { returnHome(); showToast("训练已结束，已完成的单词进度保留。 "); });
   $("replayButton").addEventListener("click", function () {
-    if (app.current) Speaker.say(app.current.word.word);
+    if (app.current) sayLearningAudio(app.current.word.word);
   });
   $("detailReplay").addEventListener("click", function () {
-    if (app.current) Speaker.say(app.current.word.word);
+    if (app.current) sayLearningAudio(app.current.word.word);
   });
   $("exampleButton").addEventListener("click", function () {
-    if (app.current) Speaker.say(app.current.word.example);
+    if (app.current) sayLearningAudio(app.current.word.example);
   });
   $("skipDetail").addEventListener("click", function () {
     nextQuestion();

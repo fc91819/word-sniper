@@ -111,6 +111,7 @@ h1, h2, p { margin-top: 0; }
 .sfx-preview-row { grid-template-columns: 1fr; }
 .sfx-sample-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
 .sfx-sample-buttons .backup-action { min-height: 32px; padding: 6px 10px; font-size: 10px; }
+.sfx-source-label { align-self: center; margin-left: -3px; color: #829482; font-size: 9px; }
 .audio-diagnostic-result { grid-column: 1 / -1; min-height: 14px; color: #98ae91; font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .audio-diagnostic-tip { margin: 0; color: #b9c1b7; font-size: 10px; line-height: 1.5; }
 .backup-action { min-height: 37px; padding: 8px 12px; border: 1px solid #435743; border-radius: 2px; color: #d6e2d3; background: #202b22; cursor: pointer; font-size: 11px; }

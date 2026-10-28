@@ -28,6 +28,7 @@ class AudioParamMock {
   setValueAtTime(value, time) { this.events.push({ kind: "set", value, time }); }
   linearRampToValueAtTime(value, time) { this.events.push({ kind: "linear", value, time }); }
   exponentialRampToValueAtTime(value, time) { this.events.push({ kind: "exponential", value, time }); }
+  cancelScheduledValues(time) { this.events.push({ kind: "cancel", time }); }
 }
 
 class AudioNodeMock {
@@ -59,6 +60,42 @@ class BufferSourceMock extends AudioNodeMock {
   constructor() { super(); this.buffer = null; }
 }
 
+class ConvolverMock extends AudioNodeMock {
+  constructor() { super(); this.buffer = null; }
+}
+
+class CompressorMock extends AudioNodeMock {
+  constructor() {
+    super();
+    this.threshold = new AudioParamMock();
+    this.knee = new AudioParamMock();
+    this.ratio = new AudioParamMock();
+    this.attack = new AudioParamMock();
+    this.release = new AudioParamMock();
+  }
+}
+
+class EventMock {
+  constructor(type) { this.type = type; }
+}
+
+class DocumentMock {
+  constructor() { this.listeners = new Map(); this.labels = new Map(); }
+  addEventListener(type, callback) {
+    const list = this.listeners.get(type) || [];
+    list.push(callback);
+    this.listeners.set(type, list);
+  }
+  dispatchEvent(event) {
+    for (const callback of this.listeners.get(event.type) || []) callback(event);
+    return true;
+  }
+  getElementById(id) {
+    if (!this.labels.has(id)) this.labels.set(id, { textContent: "" });
+    return this.labels.get(id);
+  }
+}
+
 class AudioContextMock {
   constructor(state = "running", resume = function () { return Promise.resolve(); }) {
     this.state = state;
@@ -73,28 +110,41 @@ class AudioContextMock {
   createGain() { return this.make(GainMock); }
   createBiquadFilter() { return this.make(FilterMock); }
   createBufferSource() { return this.make(BufferSourceMock); }
-  createBuffer(channels, frames) {
-    return { getChannelData() { return new Float32Array(frames); } };
+  createConvolver() { return this.make(ConvolverMock); }
+  createDynamicsCompressor() { return this.make(CompressorMock); }
+  createBuffer(_channels, frames, sampleRate = this.sampleRate) {
+    return {
+      duration: frames / sampleRate,
+      getChannelData() { return new Float32Array(frames); }
+    };
   }
+  decodeAudioData() { return Promise.resolve({ duration: 1.2 }); }
   resume() { return this._resume(); }
 }
 
-function loadSfx(AudioContextType) {
-  const window = {};
+function loadSfx(AudioContextType, options = {}) {
+  let source = sfxSource;
+  if (options.sampleUrls) {
+    source = source.replace("const SAMPLE_URLS = null;", "const SAMPLE_URLS = " + JSON.stringify(options.sampleUrls) + ";");
+  }
+  const document = options.document || new DocumentMock();
+  const window = { document, Event: EventMock };
   if (AudioContextType) window.AudioContext = AudioContextType;
-  vm.runInNewContext(sfxSource, { window, Math }, { filename: "sfx.js" });
-  return window.Sfx;
+  if (options.fetch) window.fetch = options.fetch;
+  vm.runInNewContext(source, { window, Math, Promise }, { filename: "sfx.js" });
+  return { Sfx: window.Sfx, document };
 }
 
-// a) Missing Web Audio and a rejected resume must never escape Sfx.
+// a) Missing Web Audio, a rejected resume, and failed sample loads never escape.
 {
-  const noAudio = loadSfx(null);
+  const noAudio = loadSfx(null).Sfx;
   for (const name of ["hit", "combo", "miss", "reload", "unlock", "setEnabled"]) {
     assert.doesNotThrow(function () {
       if (name === "setEnabled") noAudio[name](true);
       else noAudio[name]();
     });
   }
+
   let rejectedContext;
   class RejectedResumeContext extends AudioContextMock {
     constructor() {
@@ -102,20 +152,57 @@ function loadSfx(AudioContextType) {
       rejectedContext = this;
     }
   }
-  const rejected = loadSfx(RejectedResumeContext);
+  const rejected = loadSfx(RejectedResumeContext).Sfx;
   assert.doesNotThrow(function () { rejected.unlock(); });
   for (const name of ["hit", "combo", "miss", "reload"]) assert.doesNotThrow(function () { rejected[name](); });
   await Promise.resolve();
   assert.ok(rejectedContext);
+
+  let failedFetches = 0;
+  let fallbackContext;
+  class FallbackContext extends AudioContextMock {
+    constructor() { super(); fallbackContext = this; }
+  }
+  const fallback = loadSfx(FallbackContext, {
+    sampleUrls: { sniper: "sounds/sniper.mp3", dryfire: "sounds/dryfire.mp3" },
+    fetch: async function () { failedFetches += 1; throw new Error("offline"); }
+  });
+  fallback.Sfx.unlock();
+  assert.doesNotThrow(function () { fallback.Sfx.hit(); });
+  assert.doesNotThrow(function () { fallback.Sfx.miss(); });
+  for (let i = 0; i < 6; i += 1) await Promise.resolve();
+  assert.equal(failedFetches, 2);
+  assert.equal(fallback.document.getElementById("sfxHitSource").textContent, "合成");
+  assert.equal(fallback.document.getElementById("sfxMissSource").textContent, "合成");
+  assert.ok(fallbackContext.nodes.some(function (node) { return node instanceof ConvolverMock; }));
+  assert.ok(fallbackContext.nodes.filter(function (node) { return node instanceof FilterMock; }).length >= 5);
+
+  let decodedContext;
+  class DecodedContext extends AudioContextMock {
+    constructor() { super(); decodedContext = this; }
+  }
+  const decoded = loadSfx(DecodedContext, {
+    sampleUrls: { sniper: "sounds/sniper.mp3", dryfire: "sounds/dryfire.mp3" },
+    fetch: async function () { return { ok: true, arrayBuffer: async function () { return new ArrayBuffer(8); } }; }
+  });
+  decoded.Sfx.unlock();
+  await new Promise(function (resolve) { setTimeout(resolve, 0); });
+  assert.equal(decoded.document.getElementById("sfxHitSource").textContent, "录音");
+  assert.equal(decoded.document.getElementById("sfxMissSource").textContent, "录音");
+  decoded.Sfx.hit();
+  decoded.Sfx.miss();
+  const recordedSources = decodedContext.nodes.filter(function (node) { return node instanceof BufferSourceMock; });
+  assert.equal(recordedSources.length, 2, "decoded samples should play through AudioBufferSourceNode");
+  assert.ok(recordedSources.every(function (source) { return source.buffer && source.startTimes.length === 1; }));
 }
 
-// b) Disabled Sfx methods do not create any nodes or even need an AudioContext.
+// b) Disabled effects do not create any nodes or even need an AudioContext.
 {
   let contextCount = 0;
   class CountedContext extends AudioContextMock {
     constructor() { super(); contextCount += 1; }
   }
-  const sfx = loadSfx(CountedContext);
+  const sfx = loadSfx(CountedContext).Sfx;
   assert.deepEqual(Object.keys(sfx).sort(), ["combo", "hit", "miss", "reload", "setEnabled", "unlock"]);
   sfx.setEnabled(false);
   assert.equal(sfx.hit(), 0);
@@ -126,7 +213,7 @@ function loadSfx(AudioContextType) {
   assert.equal(contextCount, 0);
 }
 
-// c) Aim hit detail delay includes sound duration + 200 ms, with a 420 ms floor.
+// c) A successful aim hit reveals the detail card 500 ms later, with or without a combo upgrade.
 function makeAimContext(comboCount) {
   const calls = [];
   const button = {
@@ -157,7 +244,7 @@ function makeAimContext(comboCount) {
       if (!correct) app.session.combo = 0;
       else { app.session.combo += 1; app.session.maxCombo = Math.max(app.session.maxCombo, app.session.combo); }
     },
-    playSfx(name) { calls.push(name); return name === "hit" ? 120 : name === "combo" ? 160 : 0; },
+    playSfx(name) { calls.push(name); return 0; },
     updateHud() {},
     scheduleWordDetail(_item, delay) { detailDelay = delay; }
   });
@@ -167,12 +254,12 @@ function makeAimContext(comboCount) {
 }
 const ordinaryHit = makeAimContext(0);
 assert.deepEqual(ordinaryHit.calls, ["hit"]);
-assert.equal(ordinaryHit.detailDelay, 420);
+assert.equal(ordinaryHit.detailDelay, 500);
 const comboHit = makeAimContext(2);
 assert.deepEqual(comboHit.calls, ["hit", "combo"]);
-assert.equal(comboHit.detailDelay, 480);
+assert.equal(comboHit.detailDelay, 500);
 
-// d) A first spelling error is a correction exercise and does not call miss Sfx.
+// d) A spelling error is corrective practice and does not call miss Sfx.
 {
   const calls = [];
   let speechDelay = null;
@@ -202,7 +289,7 @@ assert.equal(comboHit.detailDelay, 480);
     playSfx(name) { calls.push(name); },
     showWordDetail(_item, delay) { speechDelay = delay; }
   });
-  const submitSpelling = vm.runInContext("(" + extractFunction(gameSource, "submitSpelling") + ")", context);
+  const submitSpelling = vm.runInNewContext("(" + extractFunction(gameSource, "submitSpelling") + ")", context);
   submitSpelling();
   assert.equal(app.correctionRequired, true);
   assert.deepEqual(calls, []);
@@ -212,22 +299,48 @@ assert.equal(comboHit.detailDelay, 480);
   assert.equal(speechDelay, 200);
 }
 
-// e) Miss creates two filtered noise clicks whose starts are separated by 70 ms.
+// e) Speech beginning during a shot tail ducks the shot below 15% of its original gain.
+{
+  let audioContext;
+  class ShotContext extends AudioContextMock {
+    constructor() { super(); audioContext = this; }
+  }
+  const { Sfx, document } = loadSfx(ShotContext);
+  Sfx.hit();
+  const shotGain = audioContext.nodes.find(function (node) {
+    return node instanceof GainMock && node.gain.events.some(function (event) { return event.value === 1; });
+  });
+  assert.ok(shotGain);
+  const context = vm.createContext({
+    window: { Event: EventMock },
+    document,
+    Speaker: { say(text) { return text; } }
+  });
+  const sayLearningAudio = vm.runInNewContext("(" + extractFunction(gameSource, "sayLearningAudio") + ")", context);
+  sayLearningAudio("apple");
+  const duckEvents = shotGain.gain.events.filter(function (event) { return event.kind === "set" || event.kind === "linear"; });
+  assert.equal(duckEvents.at(-1).value, 0.14);
+  assert.ok(duckEvents.at(-1).value < 0.15);
+}
+
+// f) A miss uses two 25 ms click transients plus the short metallic tail.
 {
   let audioContext;
   class TrackingContext extends AudioContextMock {
     constructor() { super(); audioContext = this; }
   }
-  const sfx = loadSfx(TrackingContext);
-  assert.equal(sfx.miss(), 110);
+  const sfx = loadSfx(TrackingContext).Sfx;
+  assert.equal(sfx.miss(), 140);
   const filters = audioContext.nodes.filter(function (node) { return node instanceof FilterMock; });
   const noiseSources = audioContext.nodes.filter(function (node) { return node instanceof BufferSourceMock; });
-  assert.equal(filters.length, 2);
-  assert.equal(noiseSources.length, 2);
-  const starts = noiseSources.map(function (node) { return node.startTimes[0]; }).sort(function (a, b) { return a - b; });
-  assert.ok(Math.abs((starts[1] - starts[0]) - 0.07) < 0.001);
-  assert.deepEqual(filters.map(function (filter) { return filter.frequency.events[0].value; }), [3500, 2200]);
-  assert.deepEqual(filters.map(function (filter) { return filter.Q.events[0].value; }), [8, 6]);
+  assert.equal(filters.length, 3);
+  assert.equal(noiseSources.length, 3);
+  const sorted = noiseSources.slice().sort(function (a, b) { return a.startTimes[0] - b.startTimes[0]; });
+  assert.ok(Math.abs((sorted[1].startTimes[0] - sorted[0].startTimes[0]) - 0.07) < 0.001);
+  assert.ok(Math.abs((sorted[0].stopTimes[0] - sorted[0].startTimes[0]) - 0.029) < 0.001);
+  assert.ok(Math.abs((sorted[1].stopTimes[0] - sorted[1].startTimes[0]) - 0.029) < 0.001);
+  assert.deepEqual(filters.map(function (filter) { return filter.frequency.events[0].value; }), [3500, 2200, 1200]);
+  assert.deepEqual(filters.map(function (filter) { return filter.Q.events[0].value; }), [8, 6, 1.5]);
 }
 
-console.log("音效模拟通过：缺少 AudioContext/恢复被拒绝安全处理；关闭时不创建节点；命中讲解延迟 420/480ms；拼写错误无 miss；卡壳声为两段相隔 70ms 的带通噪声。");
+console.log("音效模拟通过：无 Web Audio/恢复失败安全处理；素材加载失败退回合成；关闭时不建节点；命中后 500ms 讲解；单词发音时枪声压至 14%；拼写错误无卡壳声；卡壳声含两段相隔 70ms 的 25ms 带通噪声和金属尾音。");
