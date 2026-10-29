@@ -20,16 +20,16 @@ const cacheData = new Map([
     ["/word-sniper/index.html", "v5 index"],
     ["/word-sniper/game.js", "v5 game"]
   ])],
-  ["sniper-v10", new Map([
-    ["/word-sniper/index.html", "v10 index"],
-    ["/word-sniper/game.js", "v10 game"],
-    ["/word-sniper/style.css", "v10 style"]
+  ["sniper-v11", new Map([
+    ["/word-sniper/index.html", "v11 index"],
+    ["/word-sniper/game.js", "v11 game"],
+    ["/word-sniper/style.css", "v11 style"]
   ])]
 ]);
 for (const file of appFiles) {
   const path = new URL(file, scope).pathname;
   cacheData.get("sniper-v5").set(path, "v5 " + file);
-  cacheData.get("sniper-v10").set(path, "v10 " + file);
+  cacheData.get("sniper-v11").set(path, "v11 " + file);
 }
 const cacheMatchCalls = [];
 let globalCacheMatchCalls = 0;
@@ -87,7 +87,7 @@ const context = vm.createContext({
 });
 vm.runInContext(versionSource, context, { filename: "version.js" });
 vm.runInContext(workerSource, context, { filename: "service-worker.js" });
-assert.equal(context.APP_VERSION, "v10");
+assert.equal(context.APP_VERSION, "v11");
 
 async function fetchThroughWorker(request) {
   let responsePromise;
@@ -99,15 +99,15 @@ for (const file of appFiles) {
   const url = new URL(file, scope).href + "?cachecheck=1";
   assert.equal(await fetchThroughWorker({
     url, method: "GET", mode: "cors"
-  }), "v10 " + file, file + " must come from the v10 cache");
+  }), "v11 " + file, file + " must come from the v11 cache");
 }
 assert.equal(await fetchThroughWorker({
   url: scope + "?route=training", method: "GET", mode: "navigate"
-}), "v10 index.html", "navigation must return the current cached index");
+}), "v11 index.html", "navigation must return the current cached index");
 networkOffline = true;
 assert.equal(await fetchThroughWorker({
   url: scope + "?offline=1", method: "GET", mode: "navigate"
-}), "v10 index.html", "offline navigation must return the current cached index");
+}), "v11 index.html", "offline navigation must return the current cached index");
 networkOffline = false;
 assert.equal(await fetchThroughWorker({
   url: scope + "not-in-app-files.json", method: "GET", mode: "cors"
@@ -115,7 +115,7 @@ assert.equal(await fetchThroughWorker({
 assert.equal(globalCacheMatchCalls, 0, "fetch must not search all caches");
 assert.equal(networkCalls, 1, "navigation and listed assets must not reach the network");
 assert.equal(cacheMatchCalls.every(function (call) {
-  return call.name === "sniper-v10" && call.options && call.options.ignoreSearch === true;
+  return call.name === "sniper-v11" && call.options && call.options.ignoreSearch === true;
 }), true, "every cache lookup must use the current version and ignoreSearch");
 
 let installPromise;
@@ -181,4 +181,4 @@ gameLifecycle.doc.visibilityState = "visible";
 gameLifecycle.documentHandlers.visibilitychange();
 assert.equal(gameLifecycle.state.updates, 1, "returning to foreground must check for worker updates");
 
-console.log("Service Worker 模拟通过：资源与导航只来自 sniper-v10；离线首页可用；安装自动接管并清理旧缓存；对局延迟刷新，回首页只刷新一次；前台恢复时检查更新。");
+console.log("Service Worker 模拟通过：资源与导航只来自 sniper-v11；离线首页可用；安装自动接管并清理旧缓存；对局延迟刷新，回首页只刷新一次；前台恢复时检查更新。");

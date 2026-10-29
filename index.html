@@ -135,6 +135,7 @@
         <div class="hud-stat"><span>连击</span><strong><b id="comboCount">0</b><small id="comboMultiplier">1×</small></strong></div>
         <div class="hud-stat hud-score"><span>得分</span><strong id="scoreCount">0</strong></div>
       </div>
+      <div id="lifeAlert" class="life-alert" role="status" aria-live="assertive" hidden>血量告急！连对 3 题可以回血</div>
 
       <article id="questionPanel" class="question-panel panel">
         <div class="question-meta"><span class="crosshair-mark" aria-hidden="true">⊕</span><span id="questionLabel">锁定目标 / 选择正确单词</span><span class="question-box" id="boxLabel">BOX 0</span></div>
@@ -184,6 +185,8 @@
         <article class="result-stat panel"><span>最高连击</span><strong id="comboResult">0</strong><small>连续答对</small></article>
         <article class="result-stat panel"><span>新学单词</span><strong id="newWordsResult">0</strong><small>本局接触</small></article>
       </div>
+      <div id="fullHealthBadge" class="full-health-badge" hidden>✦ 满血通关 ✦</div>
+      <p id="deathNotice" class="death-notice" hidden>本局曾经阵亡，明天争取满血！</p>
       <article id="wrongCard" class="wrong-card panel" hidden>
         <div class="wrong-heading"><div><span class="detail-kicker">复盘清单 / REVIEW</span><h2>需要再练的单词</h2></div><span id="wrongCountLabel" class="wrong-count">0 个</span></div>
         <ul id="wrongList" class="wrong-list"></ul>

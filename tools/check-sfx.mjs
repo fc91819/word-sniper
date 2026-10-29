@@ -240,9 +240,10 @@ function makeAimContext(comboCount) {
     markWrong() {},
     scheduleRetry() {},
     multiplier() { return app.session.combo >= 6 ? 3 : app.session.combo >= 3 ? 2 : 1; },
-    updateCombo(correct) {
+    applyAnswerRules(_item, correct) {
       if (!correct) app.session.combo = 0;
       else { app.session.combo += 1; app.session.maxCombo = Math.max(app.session.maxCombo, app.session.combo); }
+      return false;
     },
     playSfx(name) { calls.push(name); return 0; },
     updateHud() {},
@@ -283,7 +284,7 @@ assert.equal(comboHit.detailDelay, 500);
     markWrong() {},
     scheduleRetry() {},
     multiplier() { return 1; },
-    updateCombo(correct) { if (!correct) app.session.combo = 0; },
+    applyAnswerRules(_item, correct) { if (!correct) app.session.combo = 0; return false; },
     SRS: { recordAttempt() {} },
     updateHud() {},
     playSfx(name) { calls.push(name); },

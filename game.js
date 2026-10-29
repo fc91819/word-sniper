@@ -18,6 +18,7 @@
     detailRevealTimeout: null,
     detailGateTimeout: null,
     detailSpeechTimeout: null,
+    lifeAlertTimeout: null,
     detailReadyAt: 0,
     toastTimeout: null,
     correctionRequired: false,
@@ -111,6 +112,9 @@
     }
     app.index = 0;
     app.current = null;
+    window.clearTimeout(app.lifeAlertTimeout);
+    app.lifeAlertTimeout = null;
+    $("lifeAlert").hidden = true;
     app.session = {
       totalAnswers: 0,
       correctAnswers: 0,
@@ -118,6 +122,8 @@
       maxCombo: 0,
       score: 0,
       lives: 5,
+      lostAnyLife: false,
+      reachedZero: false,
       wrongWords: new Map(),
       newWords: new Set(),
       seen: new Set()
@@ -142,7 +148,7 @@
     return 1;
   }
 
-  function updateHud() {
+  function updateHud(animateRestoredLife) {
     const total = Math.max(1, app.queue.length);
     const displayIndex = Math.min(app.index + 1, total);
     $("taskCount").textContent = "任务 " + displayIndex + " / " + total;
@@ -151,7 +157,10 @@
     $("comboMultiplier").textContent = multiplier() + "×";
     $("scoreCount").textContent = String(app.session.score);
     const hearts = [];
-    for (let i = 0; i < 5; i += 1) hearts.push('<span class="' + (i < app.session.lives ? "life-on" : "life-off") + '">♥</span>');
+    for (let i = 0; i < 5; i += 1) {
+      const restored = animateRestoredLife && i === app.session.lives - 1;
+      hearts.push('<span class="' + (i < app.session.lives ? "life-on" : "life-off") + (restored ? " life-restored" : "") + '">♥</span>');
+    }
     $("livesDisplay").innerHTML = hearts.join(" ");
     $("livesDisplay").setAttribute("aria-label", "剩余 " + app.session.lives + " 格血");
   }
@@ -275,14 +284,37 @@
     app.queue.push(SRS.makeRetryItem(item));
   }
 
-  function updateCombo(correct) {
+  function showLifeAlert() {
+    const alert = $("lifeAlert");
+    alert.hidden = false;
+    window.clearTimeout(app.lifeAlertTimeout);
+    app.lifeAlertTimeout = window.setTimeout(function () {
+      alert.hidden = true;
+      app.lifeAlertTimeout = null;
+    }, 2500);
+  }
+
+  function applyAnswerRules(item, correct) {
+    if (item.retry) return false;
     if (!correct) {
       app.session.combo = 0;
-      return;
+      app.session.lostAnyLife = true;
+      const wasAtZero = app.session.lives === 0;
+      app.session.lives = Math.max(0, app.session.lives - 1);
+      if (!wasAtZero && app.session.lives === 0 && !app.session.reachedZero) {
+        app.session.reachedZero = true;
+        showLifeAlert();
+      }
+      return false;
     }
     app.session.combo += 1;
     app.session.maxCombo = Math.max(app.session.maxCombo, app.session.combo);
     app.session.score += 10 * multiplier();
+    if (app.session.combo % 3 === 0 && app.session.lives < 5) {
+      app.session.lives = Math.min(5, app.session.lives + 1);
+      return true;
+    }
+    return false;
   }
 
   function playSfx(name) {
@@ -316,22 +348,20 @@
     });
     markSeen(item);
     app.session.totalAnswers += 1;
+    const previousMultiplier = multiplier();
+    const healed = applyAnswerRules(item, correct);
     if (correct) {
       app.session.correctAnswers += 1;
-      const previousMultiplier = multiplier();
-      updateCombo(true);
       const upgradedMultiplier = multiplier() > previousMultiplier;
       SRS.recordAttempt(app.progress, item, true, app.date);
       playSfx("hit");
       if (upgradedMultiplier) playSfx("combo");
       clickedTarget.classList.add("hit");
-      $("feedback").textContent = "命中！";
+      $("feedback").textContent = healed ? "连对 " + app.session.combo + " 题，回血 +1" : "命中！";
       $("feedback").className = "feedback good";
-      updateHud();
+      updateHud(healed);
       scheduleWordDetail(item, 500);
     } else {
-      app.session.lives = Math.max(0, app.session.lives - 1);
-      updateCombo(false);
       markWrong(item);
       scheduleRetry(item);
       SRS.recordAttempt(app.progress, item, false, app.date);
@@ -366,7 +396,7 @@
     markSeen(item);
     app.session.totalAnswers += 1;
     if (!correct) {
-      updateCombo(false);
+      applyAnswerRules(item, correct);
       markWrong(item);
       scheduleRetry(item);
       SRS.recordAttempt(app.progress, item, false, app.date);
@@ -383,13 +413,13 @@
       return;
     }
     app.session.correctAnswers += 1;
-    updateCombo(true);
+    const healed = applyAnswerRules(item, true);
     SRS.recordAttempt(app.progress, item, true, app.date);
     playSfx("reload");
     $("spellInput").disabled = true;
-    $("feedback").textContent = "装弹完成 · 开火命中";
+    $("feedback").textContent = healed ? "连对 " + app.session.combo + " 题，回血 +1" : "装弹完成 · 开火命中";
     $("feedback").className = "feedback good";
-    updateHud();
+    updateHud(healed);
     showWordDetail(item, 200);
   }
 
@@ -464,16 +494,21 @@
     window.clearTimeout(app.detailRevealTimeout);
     window.clearTimeout(app.detailGateTimeout);
     window.clearTimeout(app.detailSpeechTimeout);
+    window.clearTimeout(app.lifeAlertTimeout);
     app.detailSpeechTimeout = null;
+    app.lifeAlertTimeout = null;
+    $("lifeAlert").hidden = true;
     SRS.completeSession(app.progress, app.date);
     SRS.saveProgress(app.progress);
-    const accuracy = app.session.totalAnswers ? Math.round((app.session.correctAnswers / app.session.totalAnswers) * 100) : 0;
-    const ratingValue = Math.round(accuracy * 0.75 + (app.session.lives / 5) * 25);
-    const rating = ratingValue >= 90 ? "A" : ratingValue >= 75 ? "B" : ratingValue >= 55 ? "C" : "D";
+    const accuracyPercent = app.session.totalAnswers ? (app.session.correctAnswers / app.session.totalAnswers) * 100 : 0;
+    const accuracy = Math.round(accuracyPercent);
+    const rating = accuracyPercent >= 90 ? "A" : accuracyPercent >= 75 ? "B" : accuracyPercent >= 55 ? "C" : "D";
     $("accuracyResult").textContent = accuracy + "%";
     $("comboResult").textContent = String(app.session.maxCombo);
     $("newWordsResult").textContent = String(app.session.newWords.size);
-    $("resultSubhead").textContent = "本局评价 " + rating + " · 命中率与剩余生命共同计分";
+    $("resultSubhead").textContent = "本局评价 " + rating + " · 按命中率计分";
+    $("fullHealthBadge").hidden = app.session.lostAnyLife;
+    $("deathNotice").hidden = !app.session.reachedZero;
     const wrongWords = Array.from(app.session.wrongWords.values());
     $("wrongCard").hidden = wrongWords.length === 0;
     $("cleanCard").hidden = wrongWords.length !== 0;
@@ -666,10 +701,13 @@
     window.clearTimeout(app.detailRevealTimeout);
     window.clearTimeout(app.detailGateTimeout);
     window.clearTimeout(app.detailSpeechTimeout);
+    window.clearTimeout(app.lifeAlertTimeout);
     app.detailRevealTimeout = null;
     app.detailGateTimeout = null;
     app.detailSpeechTimeout = null;
+    app.lifeAlertTimeout = null;
     app.detailReadyAt = 0;
+    $("lifeAlert").hidden = true;
     updateHome();
     setScreen("home");
     if (workerLifecycle) workerLifecycle.onHome();

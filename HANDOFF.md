@@ -18,7 +18,7 @@
 - `version.js`：应用和 Service Worker 共用的版本常量。
 - `error-capture.js`：首页版本显示和全局错误提示。
 - `manifest.webmanifest`、`icons/`：PWA 安装信息和图标。
-- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-sfx.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`：词库、选声、播放器、发音回退、音效、切题和 Service Worker 模拟检查。
+- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-sfx.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`、`tools/check-lives.mjs`：词库、选声、播放器、发音回退、音效、切题、Service Worker 和血量规则模拟检查。
 - `README.md`：玩法、运行、数据和 Pages 发布说明。
 - `DECISIONS.md`：追加式决策台账；D-008 由总监提供。
 
@@ -37,3 +37,5 @@
 - 2026-10-27 总监线上验收 v9（D-011/D-013）：音效开关默认开；命中先出"叮"，约 0.44 秒后才读单词，不叠音；未命中合成两段带通噪声加一个短低音（卡壳声），1.5 秒后讲解卡读出正确单词。实际听感待家长在手机上试听确认。
 - 家长试听 v9：命中要狙击枪声、卡壳声不明显（D-014），修复指令已下发执手。
 - D-014：版本升至 v10；命中使用三层 Web Audio 枪声合成与 1.2 秒程序回声，卡壳声改为两段加长的金属空击并增加尾音；命中后 500ms 显示讲解卡，开始读词时枪声降至 14%。检测面板显示命中/卡壳当前来源。已找到并核对明确标为 CC0 的候选页（OpenGameArt Free Firearm Sound Library：https://opengameart.org/content/the-free-firearm-sound-library，页面提供 194MB 的压缩包；Freesound Dry_Fire.wav：https://freesound.org/people/TampaJoey/sounds/588733/，页面要求登录下载），但当前环境缺少 ffmpeg、ffprobe；未把未经裁切/编码/验收的录音放进仓库，使用 D-014 合成兜底。相关模拟检查及所有既有检查通过，已推送；GitHub Pages 的 `version.js` 返回 v10。录音缓存列表和 `sounds/` 文件暂不加入。
+- 2026-10-28 总监确认线上 v10 为合成枪声（未用录音）。血量规则改版（D-015）指令已下发执手；真实录音等家长试听 v10 后再定。
+- D-015：已实现所有题型首答错误扣血、每连续首答答对 3 题回血、血量归零后继续训练，以及仅按命中率评级、满血徽章和阵亡鼓励提示；版本升至 v11。本地新增血量模拟检查及全部既有检查、JS 语法检查通过；等待推送和线上版本确认。
