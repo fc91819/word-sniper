@@ -26,6 +26,7 @@ assert.notEqual(end, -1, "nextQuestion function should have balanced braces");
 
 const app = {
   index: 2,
+  session: { phase: "round" },
   detailReadyAt: 0,
   detailGateTimeout: 17,
   answeredCurrent: true,

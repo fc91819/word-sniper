@@ -48,7 +48,7 @@ function makeRuleHarness(lives = 5) {
   return { app, lifeAlert, timers, context, applyAnswerRules: context.applyAnswerRules };
 }
 
-function makeSubmitContext({ lives = 5, mode = "spell", retry = false, correctionRequired = false, typed = "wrong", combo = 0 } = {}) {
+function makeSubmitContext({ lives = 5, mode = "spell", correctionRequired = false, typed = "wrong", combo = 0 } = {}) {
   const harness = makeRuleHarness(lives);
   const nodes = {
     spellInput: { value: typed, disabled: false, focus() {} },
@@ -57,7 +57,7 @@ function makeSubmitContext({ lives = 5, mode = "spell", retry = false, correctio
     submitLabel: { textContent: "" },
     feedback: { textContent: "", className: "" }
   };
-  const item = { mode, retry, word: { id: "word-1", word: "apple", cn: "苹果" } };
+  const item = { mode, word: { id: "word-1", word: "apple", cn: "苹果" } };
   Object.assign(harness.app, {
     answeredCurrent: correctionRequired,
     correctionRequired,
@@ -82,7 +82,7 @@ function makeSubmitContext({ lives = 5, mode = "spell", retry = false, correctio
   return { ...harness, nodes, calls, item, submitSpelling: harness.context.submitSpelling };
 }
 
-function makeAimContext({ lives = 5, retry = false, selected = "wrong", combo = 0 } = {}) {
+function makeAimContext({ lives = 5, selected = "wrong", combo = 0 } = {}) {
   const harness = makeRuleHarness(lives);
   const classes = new Set();
   const correctTarget = {
@@ -99,7 +99,7 @@ function makeAimContext({ lives = 5, retry = false, selected = "wrong", combo = 
     targetGrid: { querySelectorAll() { return [correctTarget, wrongTarget]; } },
     feedback: { textContent: "", className: "" }
   };
-  const item = { mode: "aim", retry, kind: "review", word: { id: "word-1", word: "apple", cn: "苹果" } };
+  const item = { mode: "aim", kind: "review", word: { id: "word-1", word: "apple", cn: "苹果" } };
   Object.assign(harness.app, {
     answeredCurrent: false, current: item, progress: {}, date: "2026-10-28",
     session: Object.assign(harness.app.session, {
@@ -122,7 +122,7 @@ function makeAimContext({ lives = 5, retry = false, selected = "wrong", combo = 
   return { ...harness, nodes, calls, classes, item };
 }
 
-// a) All first-answer modes lose one life; retries and the spelling correction do not.
+// a) All first-answer modes lose one life; Boss practice and spelling correction do not.
 {
   const aim = makeAimContext();
   assert.equal(aim.app.session.lives, 4, "an aim miss costs one life");
@@ -136,29 +136,28 @@ function makeAimContext({ lives = 5, retry = false, selected = "wrong", combo = 
     spelling.submitSpelling();
     assert.equal(spelling.app.session.lives, 4, "correction entry neither costs nor restores life");
   }
-  const retryAim = makeAimContext({ lives: 2, retry: true, combo: 2 });
-  assert.equal(retryAim.app.session.lives, 2, "retry miss does not cost life");
-  assert.equal(retryAim.app.session.combo, 2, "retry miss does not alter the first-answer streak");
-  assert.equal(retryAim.app.session.lostAnyLife, false, "retry miss does not mark a life loss");
-  const retryHit = makeAimContext({ lives: 2, retry: true, selected: "apple", combo: 2 });
-  assert.equal(retryHit.app.session.lives, 2, "retry hit does not restore life");
-  assert.equal(retryHit.app.session.combo, 2, "retry hit does not count toward the first-answer streak");
-  const retrySpell = makeSubmitContext({ lives: 2, mode: "recall", retry: true, combo: 2 });
-  retrySpell.submitSpelling();
-  assert.equal(retrySpell.app.session.lives, 2, "spelling retry miss does not cost life");
-  assert.equal(retrySpell.app.session.combo, 2, "spelling retry miss does not reset the first-answer streak");
+  const boss = makeRuleHarness(2);
+  boss.app.session.combo = 2;
+  boss.app.session.maxCombo = 2;
+  boss.applyAnswerRules({ boss: true }, false);
+  assert.equal(boss.app.session.lives, 2, "a Boss miss does not cost player life");
+  assert.equal(boss.app.session.combo, 2, "a Boss miss does not reset first-round combo");
+  boss.applyAnswerRules({ boss: true }, true);
+  assert.equal(boss.app.session.lives, 2, "a Boss hit does not restore player life");
+  assert.equal(boss.app.session.combo, 2, "a Boss hit does not increase first-round combo");
+  assert.equal(boss.app.session.lostAnyLife, false, "Boss practice does not change life-loss history");
 }
 
 // b) Three consecutive first-answer hits restore one life; full health caps at five.
 {
   const h = makeRuleHarness(2);
-  for (let index = 0; index < 3; index += 1) h.applyAnswerRules({ retry: false }, true);
+  for (let index = 0; index < 3; index += 1) h.applyAnswerRules({ boss: false }, true);
   assert.equal(h.app.session.lives, 3);
   assert.equal(h.app.session.combo, 3);
-  for (let index = 0; index < 9; index += 1) h.applyAnswerRules({ retry: false }, true);
+  for (let index = 0; index < 9; index += 1) h.applyAnswerRules({ boss: false }, true);
   assert.equal(h.app.session.lives, 5, "healing must cap at five lives");
   const full = makeRuleHarness(5);
-  for (let index = 0; index < 12; index += 1) full.applyAnswerRules({ retry: false }, true);
+  for (let index = 0; index < 12; index += 1) full.applyAnswerRules({ boss: false }, true);
   assert.equal(full.app.session.lives, 5, "a full-health streak cannot exceed five lives");
   const healedSpell = makeSubmitContext({ lives: 2, mode: "spell", typed: "apple", combo: 2 });
   healedSpell.submitSpelling();
@@ -170,32 +169,32 @@ function makeAimContext({ lives = 5, retry = false, selected = "wrong", combo = 
 // c) A first-answer miss resets the streak; another three hits are required to heal.
 {
   const h = makeRuleHarness(3);
-  h.applyAnswerRules({ retry: false }, true);
-  h.applyAnswerRules({ retry: false }, true);
-  h.applyAnswerRules({ retry: false }, false);
+  h.applyAnswerRules({ boss: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
+  h.applyAnswerRules({ boss: false }, false);
   assert.equal(h.app.session.combo, 0);
   assert.equal(h.app.session.lives, 2);
-  h.applyAnswerRules({ retry: false }, true);
-  h.applyAnswerRules({ retry: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
   assert.equal(h.app.session.lives, 2);
-  h.applyAnswerRules({ retry: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
   assert.equal(h.app.session.lives, 3);
 }
 
 // d) Zero lives is non-terminal, remains clamped at zero, and the alert appears only once.
 {
   const h = makeRuleHarness(1);
-  h.applyAnswerRules({ retry: false }, false);
+  h.applyAnswerRules({ boss: false }, false);
   assert.equal(h.app.session.lives, 0);
   assert.equal(h.app.session.reachedZero, true);
   assert.equal(h.lifeAlert.hidden, false);
   assert.equal([...h.timers.values()][0].delay, 2500);
-  assert.doesNotThrow(function () { h.applyAnswerRules({ retry: false }, false); });
+  assert.doesNotThrow(function () { h.applyAnswerRules({ boss: false }, false); });
   assert.equal(h.app.session.lives, 0, "lives stay at zero after more misses");
   assert.equal(h.timers.size, 1, "the zero-life alert does not restart for every miss");
-  h.applyAnswerRules({ retry: false }, true);
-  h.applyAnswerRules({ retry: false }, true);
-  h.applyAnswerRules({ retry: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
+  h.applyAnswerRules({ boss: false }, true);
   assert.equal(h.app.session.lives, 1, "the player can continue and heal after reaching zero");
 }
 
@@ -249,4 +248,4 @@ function runFinishSession({ accuracy, lives, lostAnyLife, reachedZero }) {
   assert.equal(healedButLostResult.get("resultSubhead").textContent, "本局评价 B · 按命中率计分", "80% is B regardless of remaining lives");
 }
 
-console.log("血量规则模拟通过：打靶/拼写/默写首答错误扣血，retry 与纠错不扣血，连对回血封顶，归零可继续，结算徽章和命中率评价正确。");
+console.log("血量规则模拟通过：打靶/拼写/默写首答错误扣血，Boss 练习与纠错不改血量或连击，连对回血封顶，归零可继续，结算徽章和命中率评价正确。");

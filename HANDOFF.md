@@ -8,7 +8,7 @@
 ## 文件职责
 - `index.html`：首页、训练、结算、备份与恢复页面结构。
 - `style.css`：视觉样式、响应式布局、安全区和无障碍动效适配。
-- `game.js`：训练流程、题目切换、结算、进度交互及 Service Worker 注册。
+- `game.js`：首轮训练、循环 Boss 战、题目切换、结算、进度交互及 Service Worker 注册。
 - `service-worker.js`：版本隔离缓存、离线导航和新版自动接管。
 - `audio.js`：本机语音选择、三级无声自动回退、发音检测结果和播放卡死恢复。
 - `sfx.js`：Web Audio API 合成命中、连击、卡壳和装弹音效；支持 CC0 录音解码、压缩和失败时合成兜底；独立于单词发音播放器。
@@ -18,7 +18,7 @@
 - `version.js`：应用和 Service Worker 共用的版本常量。
 - `error-capture.js`：首页版本显示和全局错误提示。
 - `manifest.webmanifest`、`icons/`：PWA 安装信息和图标。
-- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-sfx.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`、`tools/check-lives.mjs`：词库、选声、播放器、发音回退、音效、切题、Service Worker 和血量规则模拟检查。
+- `tools/check-words.mjs`、`tools/check-voice-pick.mjs`、`tools/check-audio-player.mjs`、`tools/check-fallback.mjs`、`tools/check-sfx.mjs`、`tools/check-next-question.mjs`、`tools/check-sw.mjs`、`tools/check-lives.mjs`、`tools/check-boss.mjs`：词库、选声、播放器、发音回退、音效、切题、Service Worker、血量和 Boss 规则模拟检查。
 - `README.md`：玩法、运行、数据和 Pages 发布说明。
 - `DECISIONS.md`：追加式决策台账；D-008 由总监提供。
 
@@ -40,3 +40,5 @@
 - 2026-10-28 总监确认线上 v10 为合成枪声（未用录音）。血量规则改版（D-015）指令已下发执手；真实录音等家长试听 v10 后再定。
 - D-015：已实现所有题型首答错误扣血、每连续首答答对 3 题回血、血量归零后继续训练，以及仅按命中率评级、满血徽章和阵亡鼓励提示；版本升至 v11。本地新增血量模拟检查及全部既有检查、JS 语法检查通过；已推送到 `main`，Pages 的 `version.js` 返回 v11。
 - 2026-10-28 总监线上验收 v11（D-015）：连错 5 题血到 0 并提示"血量告急"；之后每连对 3 题回 1 格；本局末尾重出题不回血；结算按命中率评级（71% → C）并显示"本局曾经阵亡"。全对一局：5 格血不变、A 级、显示"满血通关"。拼写/默写扣血由执手模拟测试覆盖，线上未实测。
+- 2026-11-07 家长选定 Boss 战（D-016）：本局末尾错词循环出现，全部答对一次才算通关；指令已下发执手。
+- D-016：已实现首轮错词 Boss 队列、保留题型、答错轮转、两次后降难与三次后显示答案；Boss 答题不改复习进度、玩家血量、首轮连击和命中率。结算区分 Boss 击败、无 Boss 完美通关和中途结束；版本升至 v12。`check-boss.mjs` 及全部既有检查、JS 语法检查通过；等待推送和线上版本确认。

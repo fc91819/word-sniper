@@ -19,6 +19,8 @@
     detailGateTimeout: null,
     detailSpeechTimeout: null,
     lifeAlertTimeout: null,
+    bossTransitionTimeout: null,
+    bossSfxTimeout: null,
     detailReadyAt: 0,
     toastTimeout: null,
     correctionRequired: false,
@@ -113,8 +115,14 @@
     app.index = 0;
     app.current = null;
     window.clearTimeout(app.lifeAlertTimeout);
+    window.clearTimeout(app.bossTransitionTimeout);
+    window.clearTimeout(app.bossSfxTimeout);
     app.lifeAlertTimeout = null;
+    app.bossTransitionTimeout = null;
+    app.bossSfxTimeout = null;
     $("lifeAlert").hidden = true;
+    $("bossTransition").hidden = true;
+    $("bossHud").hidden = true;
     app.session = {
       totalAnswers: 0,
       correctAnswers: 0,
@@ -124,6 +132,13 @@
       lives: 5,
       lostAnyLife: false,
       reachedZero: false,
+      phase: "round",
+      bossQueue: [],
+      bossTotal: 0,
+      bossDefeated: false,
+      bossAborted: false,
+      noBoss: false,
+      completed: false,
       wrongWords: new Map(),
       newWords: new Set(),
       seen: new Set()
@@ -149,10 +164,17 @@
   }
 
   function updateHud(animateRestoredLife) {
-    const total = Math.max(1, app.queue.length);
-    const displayIndex = Math.min(app.index + 1, total);
-    $("taskCount").textContent = "任务 " + displayIndex + " / " + total;
-    $("taskProgress").style.width = Math.min(100, (app.index / total) * 100) + "%";
+    if (app.session.phase === "boss") {
+      const bossRemaining = app.session.bossQueue.length;
+      const bossTotal = Math.max(1, app.session.bossTotal);
+      $("taskCount").textContent = "BOSS 战 · 剩余 " + bossRemaining + " 个错词";
+      $("taskProgress").style.width = Math.min(100, ((bossTotal - bossRemaining) / bossTotal) * 100) + "%";
+    } else {
+      const total = Math.max(1, app.queue.length);
+      const displayIndex = Math.min(app.index + 1, total);
+      $("taskCount").textContent = "任务 " + displayIndex + " / " + total;
+      $("taskProgress").style.width = Math.min(100, (app.index / total) * 100) + "%";
+    }
     $("comboCount").textContent = String(app.session.combo);
     $("comboMultiplier").textContent = multiplier() + "×";
     $("scoreCount").textContent = String(app.session.score);
@@ -163,10 +185,12 @@
     }
     $("livesDisplay").innerHTML = hearts.join(" ");
     $("livesDisplay").setAttribute("aria-label", "剩余 " + app.session.lives + " 格血");
+    renderBossHud();
   }
 
   function configureMode(item) {
-    const isAim = item.mode === "aim";
+    const profile = item.boss ? bossQuestionProfile(item) : { mode: item.mode, direct: false, reduced: false };
+    const isAim = profile.mode === "aim";
     $("aimArea").hidden = !isAim;
     $("spellArea").hidden = isAim;
     $("questionPanel").hidden = false;
@@ -175,24 +199,25 @@
     $("feedback").className = "feedback";
     $("questionText").textContent = item.word.cn;
     $("boxLabel").textContent = "BOX " + item.box;
-    $("questionHint").textContent = !isAim ? "听发音，拼出单词" : item.kind === "new" && !item.retry ? "新目标 / 记住中文，找到正确单词" : "中文释义 / 选择正确答案";
+    $("questionHint").textContent = profile.direct ? "答案已显示 / 照着输入或点击，击败 BOSS" : !isAim ? "听发音，拼出单词" : item.kind === "new" && !item.boss ? "新目标 / 记住中文，找到正确单词" : "中文释义 / 选择正确答案";
     if (isAim) {
-      $("modeEyebrow").textContent = "TARGET RANGE / CHOOSE";
-      $("modeTitle").textContent = "打靶认词";
-      $("questionLabel").textContent = "锁定目标 / 选择正确单词";
+      $("modeEyebrow").textContent = item.boss ? "BOSS / TARGET RANGE" : "TARGET RANGE / CHOOSE";
+      $("modeTitle").textContent = item.boss ? "BOSS 打靶" : "打靶认词";
+      $("questionLabel").textContent = profile.direct ? "答案已显示 / 点击击败 BOSS" : profile.reduced ? "降低难度 / 二选一" : "锁定目标 / 选择正确单词";
       renderTargets(item);
     } else {
-      const recall = item.mode === "recall";
-      $("modeEyebrow").textContent = recall ? "NO HINT / RECALL" : "LOAD & SPELL / HINT ON";
-      $("modeTitle").textContent = recall ? "默写" : "装弹拼写";
-      $("questionLabel").textContent = recall ? "无提示 / 听音默写" : "装弹 / 首字母与长度提示";
+      const recall = profile.mode === "recall";
+      $("modeEyebrow").textContent = item.boss ? "BOSS / SPELLING" : recall ? "NO HINT / RECALL" : "LOAD & SPELL / HINT ON";
+      $("modeTitle").textContent = recall ? "默写" : item.mode === "recall" && profile.reduced ? "默写 · 提示拼写" : item.boss ? "BOSS 装弹拼写" : "装弹拼写";
+      $("questionLabel").textContent = profile.direct ? "答案已显示 / 照着输入击败 BOSS" : profile.reduced ? "降低难度 / 首字母与字母数提示" : recall ? "无提示 / 听音默写" : "装弹 / 首字母与长度提示";
       renderSpelling(item, recall);
     }
     updateHud();
   }
 
   function renderTargets(item) {
-    const options = shuffle([item.word.word].concat(item.word.distractors));
+    const profile = item.boss ? bossQuestionProfile(item) : { targetCount: 4 };
+    const options = shuffle([item.word.word].concat(item.word.distractors).slice(0, profile.targetCount));
     const grid = $("targetGrid");
     grid.innerHTML = "";
     options.forEach(function (word, index) {
@@ -243,12 +268,15 @@
 
   function renderSpelling(item, recall) {
     const input = $("spellInput");
+    const profile = item.boss ? bossQuestionProfile(item) : { direct: false, spellHint: "首字母：" + item.word.word.charAt(0).toUpperCase() + "　·　字母数：" + item.word.word.length };
     input.value = "";
     input.disabled = false;
-    $("correctionPanel").hidden = true;
-    $("submitLabel").textContent = "确认拼写";
-    $("spellHint").hidden = recall;
-    $("spellHint").textContent = recall ? "" : "首字母：" + item.word.word.charAt(0).toUpperCase() + "　·　字母数：" + item.word.word.length;
+    input.placeholder = profile.direct ? "照着显示的答案输入" : "输入英文单词";
+    $("correctionPanel").hidden = !profile.direct;
+    $("correctWord").textContent = profile.direct ? item.word.word : "";
+    $("submitLabel").textContent = profile.direct ? "击败 BOSS" : "确认拼写";
+    $("spellHint").hidden = recall || profile.direct;
+    $("spellHint").textContent = recall || profile.direct ? "" : profile.spellHint;
     $("replayButton").hidden = false;
     app.correctionRequired = false;
     $("submitSpell").onclick = submitSpelling;
@@ -271,17 +299,59 @@
   }
 
   function markSeen(item) {
-    if (item.kind === "new" && !item.retry) app.session.newWords.add(item.word.id);
+    if (app.session.phase === "round" && item.kind === "new") app.session.newWords.add(item.word.id);
   }
 
   function markWrong(item) {
-    app.session.wrongWords.set(item.word.id, item.word);
+    if (app.session.phase !== "round" || item.boss || app.session.wrongWords.has(item.word.id)) return;
+    app.session.wrongWords.set(item.word.id, { word: item.word, mode: item.mode, box: item.box });
   }
 
-  function scheduleRetry(item) {
-    if (item.retry || app.session.seen.has(item.word.id + ":retry")) return;
-    app.session.seen.add(item.word.id + ":retry");
-    app.queue.push(SRS.makeRetryItem(item));
+  function createBossQueue(wrongWords) {
+    return Array.from(wrongWords.values()).map(function (record) {
+      return {
+        word: record.word,
+        mode: record.mode,
+        box: record.box,
+        kind: "boss",
+        boss: true,
+        bossWrongCount: 0
+      };
+    });
+  }
+
+  function bossQuestionProfile(item) {
+    const wrongCount = Math.max(0, Number(item.bossWrongCount) || 0);
+    const direct = Boolean(item.boss && wrongCount >= 3);
+    const reduced = Boolean(item.boss && wrongCount >= 2);
+    const mode = item.boss && item.mode === "recall" && reduced ? "spell" : item.mode;
+    const word = item.word.word;
+    let spellHint = "";
+    if (!direct && mode === "spell") {
+      if (reduced && item.mode === "spell") {
+        spellHint = word.charAt(0).toUpperCase() + " " + Array(Math.max(0, word.length - 1)).fill("_").join(" ");
+      } else {
+        spellHint = "首字母：" + word.charAt(0).toUpperCase() + "　·　字母数：" + word.length;
+      }
+    }
+    return {
+      mode: mode,
+      direct: direct,
+      reduced: reduced,
+      targetCount: item.boss && item.mode === "aim" ? (direct ? 1 : reduced ? 2 : 4) : 0,
+      spellHint: spellHint
+    };
+  }
+
+  function rotateBossQueue(queue, item, correct) {
+    const index = queue.indexOf(item);
+    if (index < 0) return -1;
+    queue.splice(index, 1);
+    if (!correct) {
+      item.bossWrongCount += 1;
+      queue.push(item);
+    }
+    return queue.length;
   }
 
   function showLifeAlert() {
@@ -295,7 +365,7 @@
   }
 
   function applyAnswerRules(item, correct) {
-    if (item.retry) return false;
+    if (item.boss) return false;
     if (!correct) {
       app.session.combo = 0;
       app.session.lostAnyLife = true;
@@ -319,6 +389,112 @@
 
   function playSfx(name) {
     try { return Sfx[name]() || 0; } catch (_) { return 0; }
+  }
+
+  function renderBossHud() {
+    const hud = $("bossHud");
+    const session = app.session;
+    const isBossPhase = Boolean(session && session.phase && session.phase.indexOf("boss") === 0 && session.bossTotal > 0);
+    hud.hidden = !isBossPhase;
+    if (!isBossPhase) return;
+    const remaining = session.bossQueue.length;
+    const cells = [];
+    for (let index = 0; index < session.bossTotal; index += 1) {
+      cells.push('<span class="' + (index < remaining ? "boss-heart-on" : "boss-heart-off") + '" aria-hidden="true"></span>');
+    }
+    $("bossHealthCells").innerHTML = cells.join("");
+    $("bossHealthLabel").textContent = remaining + " / " + session.bossTotal;
+  }
+
+  function beginBossBattle() {
+    const queue = createBossQueue(app.session.wrongWords);
+    if (!queue.length) {
+      app.session.noBoss = true;
+      app.session.completed = true;
+      finishSession();
+      return;
+    }
+    app.session.bossQueue = queue;
+    app.session.bossTotal = queue.length;
+    app.session.phase = "boss-intro";
+    app.queue = queue;
+    app.index = 0;
+    renderBossHud();
+    const overlay = $("bossTransition");
+    overlay.className = "boss-transition boss-intro";
+    overlay.textContent = "⚠ BOSS 出现！击败 " + queue.length + " 个错词";
+    overlay.hidden = false;
+    window.clearTimeout(app.bossTransitionTimeout);
+    app.bossTransitionTimeout = window.setTimeout(function () {
+      app.bossTransitionTimeout = null;
+      if (!app.session || app.session.phase !== "boss-intro") return;
+      overlay.hidden = true;
+      app.session.phase = "boss";
+      app.answeredCurrent = false;
+      renderQuestion();
+    }, 1500);
+  }
+
+  function showBossVictory() {
+    app.session.phase = "boss-victory";
+    app.session.bossDefeated = true;
+    app.session.completed = true;
+    try { Speaker.stop(); } catch (_) {}
+    const hitDuration = playSfx("hit");
+    window.clearTimeout(app.bossSfxTimeout);
+    app.bossSfxTimeout = window.setTimeout(function () {
+      app.bossSfxTimeout = null;
+      playSfx("combo");
+    }, Math.max(0, Number(hitDuration) || 0));
+    const overlay = $("bossTransition");
+    overlay.className = "boss-transition boss-victory";
+    overlay.textContent = "BOSS 已击败！";
+    overlay.hidden = false;
+    renderBossHud();
+    window.clearTimeout(app.bossTransitionTimeout);
+    app.bossTransitionTimeout = window.setTimeout(function () {
+      app.bossTransitionTimeout = null;
+      finishSession();
+    }, 1500);
+  }
+
+  function resolveBossAnswer(item, correct) {
+    if (!app.session || app.session.phase !== "boss") return;
+    const remaining = rotateBossQueue(app.session.bossQueue, item, correct);
+    if (remaining < 0) return;
+    renderBossHud();
+    updateHud();
+    if (correct) {
+      if (remaining === 0) {
+        showBossVictory();
+        return;
+      }
+      const hitDuration = playSfx("hit");
+      $("feedback").textContent = "错词击败 · BOSS 血量 -1";
+      $("feedback").className = "feedback good";
+      scheduleWordDetail(item, Math.max(500, Number(hitDuration) || 0));
+    } else {
+      playSfx("miss");
+      $("feedback").textContent = "再试一次 · 这个错词已排到队尾";
+      $("feedback").className = "feedback bad";
+      if (item.mode === "aim") scheduleWordDetail(item, 1500);
+      else showWordDetail(item);
+    }
+  }
+
+  function abortBossBattle() {
+    if (!app.session || !app.session.phase || app.session.phase.indexOf("boss") !== 0) return false;
+    if (!app.session.completed) {
+      app.session.bossAborted = true;
+      app.session.completed = false;
+    }
+    window.clearTimeout(app.bossTransitionTimeout);
+    window.clearTimeout(app.bossSfxTimeout);
+    app.bossTransitionTimeout = null;
+    app.bossSfxTimeout = null;
+    $("bossTransition").hidden = true;
+    finishSession();
+    return true;
   }
 
   function sayLearningAudio(text, options) {
@@ -346,6 +522,11 @@
       if (!correct && button === clickedTarget) button.classList.add("missed");
       if (button !== clickedTarget && correct) button.classList.add("dimmed");
     });
+    if (item.boss) {
+      if (correct) clickedTarget.classList.add("hit");
+      resolveBossAnswer(item, correct);
+      return;
+    }
     markSeen(item);
     app.session.totalAnswers += 1;
     const previousMultiplier = multiplier();
@@ -363,7 +544,6 @@
       scheduleWordDetail(item, 500);
     } else {
       markWrong(item);
-      scheduleRetry(item);
       SRS.recordAttempt(app.progress, item, false, app.date);
       playSfx("miss");
       $("feedback").textContent = "未命中 · 正确答案已标出";
@@ -378,6 +558,21 @@
     const item = app.current;
     const typed = $("spellInput").value.trim().toLowerCase();
     const correct = typed === item.word.word.toLowerCase();
+    if (item.boss) {
+      if (!correct && item.bossWrongCount >= 3) {
+        $("feedback").textContent = "照着答案再输入一次，击败 BOSS。";
+        $("feedback").className = "feedback bad";
+        $("spellInput").value = "";
+        $("spellInput").disabled = false;
+        $("spellInput").focus();
+        return;
+      }
+      app.answeredCurrent = true;
+      app.correctionRequired = false;
+      $("spellInput").disabled = true;
+      resolveBossAnswer(item, correct);
+      return;
+    }
     if (app.correctionRequired) {
       if (!correct) {
         $("feedback").textContent = "请照着正确拼写再输入一次。";
@@ -398,7 +593,6 @@
     if (!correct) {
       applyAnswerRules(item, correct);
       markWrong(item);
-      scheduleRetry(item);
       SRS.recordAttempt(app.progress, item, false, app.date);
       app.correctionRequired = true;
       $("correctWord").textContent = item.word.word;
@@ -469,7 +663,7 @@
     app.detailSpeechTimeout = null;
     $("skipDetail").disabled = false;
     app.detailReadyAt = 0;
-    app.index += 1;
+    if (app.session.phase !== "boss") app.index += 1;
     app.answeredCurrent = false;
     app.correctionRequired = false;
     try { Speaker.stop(); } catch (_) { /* Playback errors must not block question changes. */ }
@@ -477,8 +671,22 @@
   }
 
   function renderQuestion() {
+    if (app.session.phase === "boss-intro" || app.session.phase === "boss-victory") return;
+    if (app.session.phase === "boss") {
+      if (!app.session.bossQueue.length) {
+        showBossVictory();
+        return;
+      }
+      app.current = app.session.bossQueue[0];
+      app.answeredCurrent = false;
+      const nextBoss = app.session.bossQueue[1];
+      $("nextAudioWord").value = nextBoss ? nextBoss.word.word : "";
+      document.dispatchEvent(new Event("sniper:question"));
+      configureMode(app.current);
+      return;
+    }
     if (app.index >= app.queue.length) {
-      finishSession();
+      beginBossBattle();
       return;
     }
     app.current = app.queue[app.index];
@@ -495,21 +703,38 @@
     window.clearTimeout(app.detailGateTimeout);
     window.clearTimeout(app.detailSpeechTimeout);
     window.clearTimeout(app.lifeAlertTimeout);
+    window.clearTimeout(app.bossTransitionTimeout);
+    window.clearTimeout(app.bossSfxTimeout);
     app.detailSpeechTimeout = null;
     app.lifeAlertTimeout = null;
+    app.bossTransitionTimeout = null;
+    app.bossSfxTimeout = null;
     $("lifeAlert").hidden = true;
-    SRS.completeSession(app.progress, app.date);
+    $("bossTransition").hidden = true;
+    $("bossHud").hidden = true;
+    if (app.session.completed) SRS.completeSession(app.progress, app.date);
     SRS.saveProgress(app.progress);
     const accuracyPercent = app.session.totalAnswers ? (app.session.correctAnswers / app.session.totalAnswers) * 100 : 0;
     const accuracy = Math.round(accuracyPercent);
     const rating = accuracyPercent >= 90 ? "A" : accuracyPercent >= 75 ? "B" : accuracyPercent >= 55 ? "C" : "D";
+    $("resultTitle").textContent = "训练结算";
+    $("resultEyebrow").textContent = app.session.bossAborted
+      ? "DEBRIEF / MISSION INCOMPLETE"
+      : app.session.bossDefeated
+        ? "DEBRIEF / BOSS DEFEATED"
+        : "DEBRIEF / PERFECT CLEAR";
+    $("sessionOutcome").textContent = app.session.bossAborted
+      ? "未通关"
+      : app.session.bossDefeated
+        ? "通关 · BOSS 已击败"
+        : "无 Boss，完美通关";
     $("accuracyResult").textContent = accuracy + "%";
     $("comboResult").textContent = String(app.session.maxCombo);
     $("newWordsResult").textContent = String(app.session.newWords.size);
     $("resultSubhead").textContent = "本局评价 " + rating + " · 按命中率计分";
     $("fullHealthBadge").hidden = app.session.lostAnyLife;
     $("deathNotice").hidden = !app.session.reachedZero;
-    const wrongWords = Array.from(app.session.wrongWords.values());
+    const wrongWords = Array.from(app.session.wrongWords.values()).map(function (record) { return record.word; });
     $("wrongCard").hidden = wrongWords.length === 0;
     $("cleanCard").hidden = wrongWords.length !== 0;
     $("wrongCountLabel").textContent = wrongWords.length + " 个";
@@ -702,15 +927,27 @@
     window.clearTimeout(app.detailGateTimeout);
     window.clearTimeout(app.detailSpeechTimeout);
     window.clearTimeout(app.lifeAlertTimeout);
+    window.clearTimeout(app.bossTransitionTimeout);
+    window.clearTimeout(app.bossSfxTimeout);
     app.detailRevealTimeout = null;
     app.detailGateTimeout = null;
     app.detailSpeechTimeout = null;
     app.lifeAlertTimeout = null;
+    app.bossTransitionTimeout = null;
+    app.bossSfxTimeout = null;
     app.detailReadyAt = 0;
     $("lifeAlert").hidden = true;
+    $("bossTransition").hidden = true;
+    $("bossHud").hidden = true;
     updateHome();
     setScreen("home");
     if (workerLifecycle) workerLifecycle.onHome();
+  }
+
+  function quitTraining() {
+    if (abortBossBattle()) return;
+    returnHome();
+    showToast("训练已结束，已完成的单词进度保留。 ");
   }
 
   updateSfxToggle();
@@ -787,7 +1024,7 @@
   });
   $("validateRestoreButton").addEventListener("click", validateRestoreCode);
   $("confirmRestoreButton").addEventListener("click", confirmRestore);
-  $("quitButton").addEventListener("click", function () { returnHome(); showToast("训练已结束，已完成的单词进度保留。 "); });
+  $("quitButton").addEventListener("click", quitTraining);
   $("replayButton").addEventListener("click", function () {
     if (app.current) sayLearningAudio(app.current.word.word);
   });

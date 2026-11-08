@@ -135,6 +135,12 @@
         <div class="hud-stat"><span>连击</span><strong><b id="comboCount">0</b><small id="comboMultiplier">1×</small></strong></div>
         <div class="hud-stat hud-score"><span>得分</span><strong id="scoreCount">0</strong></div>
       </div>
+      <div id="bossHud" class="boss-hud panel" hidden>
+        <strong class="boss-title">BOSS</strong>
+        <div id="bossHealthCells" class="boss-health-cells" role="img" aria-label="BOSS 血量"></div>
+        <span id="bossHealthLabel" class="boss-health-label">0 / 0</span>
+      </div>
+      <div id="bossTransition" class="boss-transition" role="status" aria-live="assertive" hidden></div>
       <div id="lifeAlert" class="life-alert" role="status" aria-live="assertive" hidden>血量告急！连对 3 题可以回血</div>
 
       <article id="questionPanel" class="question-panel panel">
@@ -175,9 +181,10 @@
 
     <section id="resultView" class="screen result-screen" hidden aria-labelledby="resultTitle">
       <div class="result-heading">
-        <p class="eyebrow"><span class="eyebrow-line"></span> DEBRIEF / MISSION COMPLETE</p>
+        <p id="resultEyebrow" class="eyebrow"><span class="eyebrow-line"></span> DEBRIEF / PERFECT CLEAR</p>
         <div class="result-emblem" aria-hidden="true">✦</div>
-        <h1 id="resultTitle">训练完成</h1>
+        <h1 id="resultTitle">训练结算</h1>
+        <p id="sessionOutcome" class="session-outcome">无 Boss，完美通关</p>
         <p id="resultSubhead" class="hero-lede">每次复习，都是一次命中。</p>
       </div>
       <div class="result-stats">
